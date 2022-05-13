@@ -8,9 +8,9 @@ import gevent
 from cyy_naive_lib.log import get_logger, set_file_handler
 from cyy_torch_toolbox.data_structure.torch_process_pool import \
     TorchProcessPool
-from cyy_torch_toolbox.dataset import replace_dataset_labels, sub_dataset
-from cyy_torch_toolbox.dataset_util import DatasetUtil
-from cyy_torch_toolbox.ml_type import MachineLearningPhase
+from cyy_torch_toolbox.dataset import sub_dataset
+from cyy_torch_toolbox.dataset_transform.transforms import replace_target
+from cyy_torch_toolbox.ml_type import MachineLearningPhase, TransformType
 
 from config import get_config
 from factory import get_worker_config
@@ -35,12 +35,13 @@ def create_worker(
     if noise_percent is not None and noise_percent != 0:
         get_logger().warning("use noise_percent %s", noise_percent)
 
-        trainer.dataset_collection.transform_dataset(
-            MachineLearningPhase.Training,
-            lambda training_dataset, _: replace_dataset_labels(
-                training_dataset,
-                DatasetUtil(training_dataset).randomize_subset_label(noise_percent),
-            ),
+        label_map = trainer.dataset_collection.get_dataset_util(
+            phase=MachineLearningPhase.Training
+        ).randomize_subset_label(noise_percent)
+        trainer.dataset_collection.append_transform(
+            transform=replace_target(label_map),
+            key=TransformType.Target,
+            phases=[MachineLearningPhase.Training],
         )
     return worker_constructor(
         config=config,
@@ -72,6 +73,8 @@ if __name__ == "__main__":
             raise RuntimeError(
                 f"Your open file limit {value} is too small, this training uses lots of open files."
             )
+    os.environ["CUDA_MODULE_LOADING"] = "LAZY"
+    os.environ["USE_THREAD_DATALOADER"] = "1"
     parser = argparse.ArgumentParser()
     config = get_config(parser=parser)
     config.apply_global_config()
