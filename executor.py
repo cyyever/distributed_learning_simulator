@@ -1,4 +1,5 @@
 import copy
+import multiprocessing
 import os
 import threading
 
@@ -36,11 +37,13 @@ class Executer:
     def _acquire_semaphore(self):
         if not self.__hold_semaphore:
             self.semaphore.acquire()
+            multiprocessing.current_process().name = self._name
             threading.current_thread().name = self._name
             self.__hold_semaphore = True
 
     def _release_semaphore(self):
         if self.__hold_semaphore:
+            multiprocessing.current_process().name = "unknown executor"
             threading.current_thread().name = "unknown executor"
             self.__hold_semaphore = False
             self.semaphore.release()
