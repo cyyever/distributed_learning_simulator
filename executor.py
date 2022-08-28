@@ -1,3 +1,4 @@
+import copy
 import os
 import threading
 
@@ -13,21 +14,23 @@ class Executer:
     __hold_device_lock = False
 
     def __init__(self, config, endpoint, name, **kwargs):
-        super().__init__(**kwargs)
-        self.config = config
+        self.config = copy.deepcopy(config)
         self._endpoint = endpoint
         self.__used_cuda_memory = None
         self.__hold_semaphore: bool = False
         self._name = name
+        self.__device_lock = kwargs.get("device_lock", None)
 
-    def get_device(self):
+    def _get_device(self, lock_callback=None):
         if not hasattr(self.__thread_data, "device"):
-            if not Executer.__hold_device_lock:
-                self._endpoint.topology_lock.acquire()
-                Executer.__hold_device_lock = True
-                self.__thread_data.device = get_device(
-                    use_cuda_only=True, max_needed_bytes=self.__used_cuda_memory
-                )
+            if not self.__hold_device_lock:
+                self.__device_lock.acquire()
+                self.__hold_device_lock = True
+                if lock_callback is not None:
+                    lock_callback()
+            self.__thread_data.device = get_device(
+                use_cuda_only=True, max_needed_bytes=self.__used_cuda_memory
+            )
         return self.__thread_data.device
 
     def _acquire_semaphore(self):
@@ -42,20 +45,20 @@ class Executer:
             self.__hold_semaphore = False
             self.semaphore.release()
 
-    def _release_device_lock(self, *args, **kwargs):
-        if Executer.__hold_device_lock:
+    def _release_device_lock(self, **kwargs):
+        if self.__hold_device_lock:
             if hasattr(self.__thread_data, "device"):
                 stats = torch.cuda.memory_stats(device=self.__thread_data.device)
                 if stats:
                     self.__used_cuda_memory = stats["allocated_bytes.all.peak"]
-            self._endpoint.topology_lock.release()
-            Executer.__hold_device_lock = False
+            self.__device_lock.release()
+            self.__hold_device_lock = False
 
     def start(self):
         raise NotImplementedError()
 
     @property
     def save_dir(self):
-        save_dir = os.path.join(self.config.save_dir, self._name)
+        save_dir = os.path.join(self.config.save_dir, self._name.replace(" ", "_"))
         os.makedirs(save_dir, exist_ok=True)
         return save_dir

@@ -1,0 +1,16 @@
+---
+dataset_name: ImageNet
+model_name: Resnet50
+distributed_algorithm: fed_avg
+optimizer_name: SGD
+worker_number: 10
+round: 100
+learning_rate_scheduler: CosineAnnealingLR
+epoch: 5
+batch_size: 128
+learning_rate: 0.01
+parallel_number: 4
+cache_transforms: false
+use_amp: true
+log_level: INFO
+...

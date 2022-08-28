@@ -1,12 +1,15 @@
-import functools
+from typing import Any
 
 from .central_topology import CentralTopology
 from .endpoint import Endpoint
-from .quantized_endpoint import QuantizedEndpoint
 
 
 class ServerEndpoint(Endpoint):
     _topology: CentralTopology
+
+    @property
+    def worker_num(self):
+        return self._topology.worker_num
 
     def set_function(self, fun):
         self._topology.set_server_function(fun)
@@ -20,8 +23,13 @@ class ServerEndpoint(Endpoint):
     def send(self, data, worker_id):
         self._topology.send_to_worker(data, worker_id)
 
-    def broadcast(self, data):
-        for worker_id in range(self._topology.worker_num):
+    def broadcast(self, data: Any, worker_ids: None | list | set = None) -> None:
+        all_worker_ids = set(range(self.worker_num))
+        if worker_ids is None:
+            worker_ids = all_worker_ids
+        else:
+            worker_ids = set(worker_ids).intersection(all_worker_ids)
+        for worker_id in worker_ids:
             self.send(data, worker_id)
 
     def wait_close(self):
@@ -46,18 +54,3 @@ class ClientEndpoint(Endpoint):
 
     def close(self):
         self._topology.close()
-
-
-class QuantizedClientEndpoint(ClientEndpoint, QuantizedEndpoint):
-    def send(self, data):
-        super().send(data=self.quant(data))
-
-
-class QuantizedServerEndpoint(ServerEndpoint, QuantizedEndpoint):
-    def set_function(self, fun):
-        self._topology.set_server_function(
-            functools.partial(self.dequan_and_process, fun=fun)
-        )
-
-    def dequan_and_process(self, data, fun):
-        return fun(self.dequant(data))

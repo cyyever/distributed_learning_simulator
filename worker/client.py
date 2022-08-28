@@ -17,4 +17,5 @@ class Client(Worker):
             self._release_semaphore()
             gevent.sleep(1)
 
+        self._load_to_memory()
         return self._endpoint.get()

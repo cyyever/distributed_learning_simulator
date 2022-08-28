@@ -1,0 +1,16 @@
+---
+dataset_name: CIFAR10
+model_name: densenet40
+distributed_algorithm: fed_avg
+optimizer_name: SGD
+worker_number: 10
+batch_size: 64
+round: 100
+learning_rate_scheduler: CosineAnnealingLR
+epoch: 5
+learning_rate: 0.1
+parallel_number: 8
+cache_transforms: true
+use_amp: true
+log_level: INFO
+...

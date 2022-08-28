@@ -37,6 +37,12 @@ class GradientWorker(Client):
         self.trainer.append_named_hook(
             ModelExecutorHookPoint.AFTER_EPOCH, "record", self.__record
         )
+        self.trainer.append_named_hook(
+            ModelExecutorHookPoint.AFTER_EXECUTE, "report_end", self.__report_end
+        )
+
+    def __report_end(self, **kwargs):
+        self.send_data_to_server({"end_training": True})
 
     def _process_gradient(self, gradient):
         raise NotImplementedError()

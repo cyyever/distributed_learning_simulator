@@ -1,0 +1,14 @@
+---
+dataset_name: MNIST
+model_name: LeNet5
+distributed_algorithm: GTG_shapley_value
+optimizer_name: SGD
+worker_number: 2
+round: 20
+learning_rate_scheduler: CosineAnnealingLR
+epoch: 10
+learning_rate: 0.01
+parallel_number: 1
+cache_transforms: true
+log_level: INFO
+...

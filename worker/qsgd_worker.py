@@ -12,6 +12,10 @@ class QSGDWorker(GradientWorker):
     def _process_gradient(self, gradient):
         quantized_pair = self.quant(gradient)
         self.send_data_to_server(
-            (len(self.trainer.dataset), quantized_pair, self.dequant)
+            {
+                "dataset_size": self.trainer.dataset_size,
+                "quantized_pair": quantized_pair,
+                "dequant": self.dequant,
+            }
         )
         return self.get_result_from_server()

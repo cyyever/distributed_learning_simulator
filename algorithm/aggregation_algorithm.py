@@ -1,69 +1,69 @@
-import os
+import copy
 from typing import Any
 
-from cyy_torch_toolbox.ml_type import MachineLearningPhase
-from cyy_torch_toolbox.model_executor import ModelExecutor
-from model_transform.drop_normalization import DropNormalization
+from cyy_naive_lib.log import get_logger
+from cyy_naive_lib.storage import DataStorage
 
 
 class AggregationAlgorithm:
-    __tester = None
-
-    @property
-    def tester(self) -> ModelExecutor:
-        if self.__tester is None:
-            self._acquire_semaphore()
-            self.__tester = self.config.create_inferencer(
-                phase=MachineLearningPhase.Test
-            )
-            self.__tester.disable_logger()
-            if os.getenv("drop_norm"):
-                self.__tester.append_hook(DropNormalization())
-            self.__tester.set_device(self.get_device())
-            self._release_semaphore()
-        return self.__tester
-
-    def get_metric(self, parameter_dict):
-        model_util = self.tester.model_util
-        model_util.load_parameter_dict(parameter_dict)
-        model_util.remove_statistical_variables()
-        self.tester.inference(epoch=1)
-        metric = {
-            "acc": self.tester.performance_metric.get_accuracy(1).item(),
-            "loss": self.tester.performance_metric.get_loss(1).item(),
-        }
-        self.tester.offload_from_gpu()
-        return metric
-
-    def _aggregate_worker_data(self, worker_data: dict):
-        raise NotImplementedError()
-
     @classmethod
-    def get_dataset_ratios(cls, dataset_sizes: dict) -> dict:
-        total_training_dataset_size = sum(dataset_sizes.values())
-        return {
-            k: float(v) / float(total_training_dataset_size)
-            for (k, v) in dataset_sizes.items()
-        }
+    def get_ratios(cls, scalars: dict) -> dict:
+        total_scalar = sum(scalars.values())
+        return {k: float(v) / float(total_scalar) for (k, v) in scalars.items()}
 
     @classmethod
     def weighted_avg(cls, data_dict: dict, weight_dict: dict) -> Any:
         avg_data = None
-        for k, d in data_dict.items():
+        for k, v in data_dict.items():
             ratio = weight_dict[k]
             assert 0 <= ratio <= 1
+            d = v
+            if isinstance(v, DataStorage):
+                d = v.data
 
-            if isinstance(d, dict):
-                d = {k2: v2 * ratio for (k2, v2) in d.items()}
-                if avg_data is None:
-                    avg_data = d
-                else:
+            match d:
+                case dict():
+                    d = {k2: v2 * ratio for (k2, v2) in d.items()}
+                case _:
+                    d = d * ratio
+            if isinstance(v, DataStorage):
+                v.save()
+            if avg_data is None:
+                avg_data = d
+            else:
+                if isinstance(avg_data, dict):
                     for k in avg_data:
                         avg_data[k] += d[k]
-            else:
-                d = d * ratio
-                if avg_data is None:
-                    avg_data = d
                 else:
                     avg_data += d
         return avg_data
+
+    def extract_data(
+        self, worker_data: dict[str, DataStorage], old_parameter_dict: dict | None
+    ) -> dict:
+        dataset_sizes = {}
+        parameters = {}
+        get_logger().debug("begin aggregating %s", worker_data.keys())
+        for worker_id, data in worker_data.items():
+            data = data.data
+            dataset_sizes[worker_id] = data["dataset_size"]
+            if "use_distributed_model" in data:
+                assert old_parameter_dict is not None
+                parameters[worker_id] = copy.deepcopy(old_parameter_dict)
+            elif "parameter" in data:
+                parameters[worker_id] = data["parameter"]
+            else:
+                assert old_parameter_dict is not None
+                parameters[worker_id] = copy.deepcopy(old_parameter_dict)
+                if "parameter_diff" not in data:
+                    data["parameter_diff"] = {}
+                if "quantized_parameter_diff" in data:
+                    get_logger().debug("process quantized_parameter_diff")
+                    for k, v in data["quantized_parameter_diff"].items():
+                        assert k not in data["parameter_diff"]
+                        data["parameter_diff"][k] = v
+
+                for k, v in data["parameter_diff"].items():
+                    parameters[worker_id][k] += v
+            get_logger().debug("get worker data %s", worker_id)
+        return {"parameter": parameters, "dataset_size": dataset_sizes}

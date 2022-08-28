@@ -1,21 +1,42 @@
-import os
-import threading
+from typing import Any
 
 import gevent
 import gevent.lock
 from cyy_naive_lib.log import get_logger
+from cyy_torch_toolbox.ml_type import MachineLearningPhase
+from cyy_torch_toolbox.model_executor import ModelExecutor
 from executor import Executer
 from topology.endpoint import Endpoint
 
 
 class Server(Executer):
-    def __init__(self, config, endpoint: Endpoint):
-        super().__init__(config=config, endpoint=endpoint, name="server")
-        self.round_number = 0
-        self._end_server: bool = False
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs, name="server")
+        self.__tester: None | ModelExecutor = None
+
+    @property
+    def tester(self) -> ModelExecutor:
+        if self.__tester is None:
+            self.__tester = self.config.create_inferencer(
+                phase=MachineLearningPhase.Test
+            )
+            self.__tester.disable_logger()
+        return self.__tester
+
+    def get_metric(self, parameter_dict):
+        self.tester.model_util.load_parameter_dict(parameter_dict)
+        self.tester.set_device(self._get_device())
+        self.tester.inference(epoch=1)
+        metric = {
+            "acc": self.tester.performance_metric.get_accuracy(1).item(),
+            "loss": self.tester.performance_metric.get_loss(1).item(),
+        }
+        self._release_device_lock()
+        self.tester.offload_from_gpu()
+        return metric
 
     def start(self):
-        while not self._end_server:
+        while not self._stopped():
             for worker_id in range(self._endpoint._topology.worker_num):
                 while True:
                     self._acquire_semaphore()
@@ -29,10 +50,10 @@ class Server(Executer):
                     )
                     self._release_semaphore()
                     break
+        get_logger().warning("end server")
 
     def _process_worker_data(self, worker_id, data):
         raise NotImplementedError()
-
 
     @property
     def worker_number(self):
@@ -41,15 +62,14 @@ class Server(Executer):
     def send_result(self, data):
         selected_workers = self._select_workers()
         get_logger().debug("choose workers %s", selected_workers)
-        for worker_id in range(self.worker_number):
-            result = None
-            if worker_id in selected_workers:
-                result = data
-            self._endpoint.send(data=result, worker_id=worker_id)
+        if selected_workers:
+            self._endpoint.broadcast(data=data, worker_ids=selected_workers)
+        unselected_workers = set(range(self.worker_number)) - selected_workers
+        if unselected_workers:
+            self._endpoint.broadcast(data=None, worker_ids=unselected_workers)
 
     def _select_workers(self) -> set:
         return set(range(self.worker_number))
 
-    def _acquire_semaphore(self):
-        super()._acquire_semaphore()
-        threading.current_thread().name = "server"
+    def _stopped(self) -> bool:
+        raise NotImplementedError()

@@ -4,7 +4,7 @@ from .aggregation_server import AggregationServer
 
 
 class QSGDServer(AggregationServer):
-    def _aggregate_worker_data(self, round_number, worker_data):
+    def _aggregate_worker_data(self, worker_data):
         parameters = {}
         dataset_sizes = {}
         for worker_id, data in worker_data.items():

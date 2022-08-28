@@ -1,9 +1,9 @@
-import argparse
 import datetime
 import os
 import typing
 import uuid
 
+import hydra
 from cyy_torch_toolbox.default_config import DefaultConfig
 
 
@@ -15,58 +15,52 @@ class ExperimentConfig(DefaultConfig):
         self.parallel_number = None
         self.round = None
         self.iid = True
-        self.no_distribute_init_parameters = False
+        self.distribute_init_parameters = True
         self.noise_percents: typing.Optional[list] = None
-        self.__task_time = None
-        self.task_id = None
         self.log_file = None
+        self.use_amp = False
+        self.offload_memory = False
+        self.endpoint_kwargs = {}
+        self.algorithm_kwargs = {}
+        self.frozen_modules = []
 
-    def load_args(self, parser=None):
-        if parser is None:
-            parser = argparse.ArgumentParser()
-        parser.add_argument("--distributed_algorithm", type=str, required=True)
-        parser.add_argument("--worker_number", type=int, required=True)
-        parser.add_argument("--parallel_number", type=int, default=None)
-        parser.add_argument("--round", type=int, required=True)
-        parser.add_argument("--noniid", action="store_true", default=False)
-        parser.add_argument(
-            "--no_distribute_init_parameters", action="store_true", default=False
-        )
-        parser.add_argument("--noise_percents", type=str, default=None)
-        args = super().load_args(parser=parser)
-
-        if args.noniid:
-            self.iid = False
-            if self.noise_percents is not None:
-                self.noise_percents = [float(s) for s in self.noise_percents.split("|")]
-                assert len(self.noise_percents) == self.worker_number
-        else:
+    def load_config_from_file(self, conf):
+        DefaultConfig.load_config(self, conf)
+        if self.iid:
             assert self.noise_percents is None
-        self.__task_time = datetime.datetime.now()
-        date_time = "{date:%Y-%m-%d_%H_%M_%S}".format(date=self.__task_time)
+        else:
+            if self.noise_percents is not None:
+                assert isinstance(self.noise_percents, list)
+                assert len(self.noise_percents) == self.worker_number
+        task_time = datetime.datetime.now()
+        date_time = "{date:%Y-%m-%d_%H_%M_%S}".format(date=task_time)
+        log_suffix = self.algorithm_kwargs.get("log_suffix", "")
         dir_suffix = os.path.join(
-            self.distributed_algorithm + ""
+            self.distributed_algorithm + log_suffix
             if self.iid
-            else self.distributed_algorithm + "_non_iid",
+            else self.distributed_algorithm + "_non_iid" + log_suffix,
             self.dc_config.dataset_name,
-            self.model_name,
+            self.model_config.model_name,
             date_time,
             str(uuid.uuid4()),
         )
         self.save_dir = os.path.join("session", dir_suffix)
-        self.task_id = "{}_{}_{}_{}".format(
-            self.distributed_algorithm
-            if self.iid
-            else self.distributed_algorithm + "_non_iid",
-            self.dc_config.dataset_name,
-            self.model_name,
-            date_time,
-        )
-
         self.log_file = str(os.path.join("log", dir_suffix)) + ".log"
-        return self
+
+    def create_trainer(self, *args, **kwargs):
+        trainer = super().create_trainer(*args, **kwargs)
+        if self.use_amp:
+            trainer.set_amp()
+        for module in self.frozen_modules:
+            trainer.model_util.freeze_modules(module_name=module)
+        return trainer
 
 
-def get_config(parser: argparse.ArgumentParser | None = None) -> ExperimentConfig:
-    config = ExperimentConfig()
-    return config.load_args(parser=parser)
+global_config = ExperimentConfig()
+
+
+@hydra.main(config_path="conf", version_base=None)
+def load_config(conf) -> None:
+    if len(conf) == 1:
+        conf = next(iter(conf.values()))
+    global_config.load_config_from_file(conf)
