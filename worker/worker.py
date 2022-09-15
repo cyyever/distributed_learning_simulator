@@ -1,13 +1,12 @@
-import gevent
 import gevent.lock
 from cyy_naive_lib.log import get_logger
 from cyy_torch_toolbox.metric_visualizers.metric_logger import MetricLogger
 from cyy_torch_toolbox.ml_type import ModelExecutorHookPoint
 from cyy_torch_toolbox.trainer import Trainer
-from executor import Executer
+from executor import Executor
 
 
-class Worker(Executer):
+class Worker(Executor):
     semaphore = gevent.lock.BoundedSemaphore(value=1)
 
     def __init__(self, config, worker_id: int, trainer: Trainer, endpoint, **kwargs):
@@ -47,7 +46,7 @@ class Worker(Executer):
     def _before_training(self):
         pass
 
-    def _stopped(self)->bool:
+    def _stopped(self) -> bool:
         return self._round_num > self.config.round
 
     def start(self, **kwargs):

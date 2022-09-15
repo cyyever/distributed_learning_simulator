@@ -9,7 +9,7 @@ import torch
 from cyy_torch_toolbox.device import get_device
 
 
-class Executer:
+class Executor:
     semaphore = gevent.lock.BoundedSemaphore(value=1)
     __thread_data = threading.local()
     __hold_device_lock = False

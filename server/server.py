@@ -1,15 +1,12 @@
-from typing import Any
-
 import gevent
 import gevent.lock
 from cyy_naive_lib.log import get_logger
 from cyy_torch_toolbox.ml_type import MachineLearningPhase
 from cyy_torch_toolbox.model_executor import ModelExecutor
-from executor import Executer
-from topology.endpoint import Endpoint
+from executor import Executor
 
 
-class Server(Executer):
+class Server(Executor):
     def __init__(self, **kwargs):
         super().__init__(**kwargs, name="server")
         self.__tester: None | ModelExecutor = None
@@ -23,7 +20,9 @@ class Server(Executer):
             self.__tester.disable_logger()
         return self.__tester
 
-    def get_metric(self, parameter_dict):
+    def get_metric(self, parameter_dict: dict) -> dict:
+        if "parameter" in parameter_dict:
+            parameter_dict = parameter_dict["parameter"]
         self.tester.model_util.load_parameter_dict(parameter_dict)
         self.tester.set_device(self._get_device())
         self.tester.inference(epoch=1)
@@ -37,7 +36,7 @@ class Server(Executer):
 
     def start(self):
         while not self._stopped():
-            for worker_id in range(self._endpoint._topology.worker_num):
+            for worker_id in range(self._endpoint.worker_num):
                 while True:
                     self._acquire_semaphore()
                     has_request = self._endpoint.has_data(worker_id)

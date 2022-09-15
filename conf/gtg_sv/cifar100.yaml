@@ -1,7 +1,7 @@
 ---
-dataset_name: CIFAR10
+dataset_name: CIFAR100
 model_name: densenet40
-distributed_algorithm: fed_avg
+distributed_algorithm: GTG_shapley_value
 optimizer_name: SGD
 worker_number: 10
 batch_size: 64

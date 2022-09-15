@@ -49,16 +49,8 @@ def compute_acc(paths, args):
                     worker_acc[worker_id].append(acc)
                     break
     assert len(final_test_acc) == len(paths)
-    assert len(worker_acc) == args.w
-    for worker_id in range(args.w):
-        assert len(worker_acc[worker_id]) == len(paths)
-    worker_std, worker_mean = torch.std_mean(
-        torch.tensor(sum(worker_acc.values(), start=[]))
-    )
-    print("workers training", worker_mean, worker_std)
     std, mean = torch.std_mean(torch.tensor(final_test_acc))
     print("test acc", mean, std)
-    pass
 
 
 if __name__ == "__main__":
@@ -133,7 +125,7 @@ if __name__ == "__main__":
         ) / total_msg
 
         print("compression", compression)
-        print("co",total_msg * compression)
+        print("co", total_msg * compression)
     if args.a.lower() == "fed_dropout_avg":
         total_msg = args.r * args.k * 2 + args.w
         print("total_msg is", total_msg)

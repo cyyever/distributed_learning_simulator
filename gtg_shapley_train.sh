@@ -1,1 +1,1 @@
-python3 ./simulator.py --config-name GTG_shapley_value/mnist.yaml
+python3 ./simulator.py --config-name gtg_sv/mnist.yaml

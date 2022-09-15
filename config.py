@@ -1,37 +1,36 @@
 import datetime
 import os
-import typing
 import uuid
 
 import hydra
 from cyy_torch_toolbox.default_config import DefaultConfig
+from omegaconf import OmegaConf
 
 
-class ExperimentConfig(DefaultConfig):
+class DistributedTrainingConfig(DefaultConfig):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.distributed_algorithm: str = None
-        self.worker_number = None
-        self.parallel_number = None
-        self.round = None
-        self.iid = True
-        self.distribute_init_parameters = True
-        self.noise_percents: typing.Optional[list] = None
-        self.log_file = None
-        self.use_amp = False
-        self.offload_memory = False
-        self.endpoint_kwargs = {}
-        self.algorithm_kwargs = {}
-        self.frozen_modules = []
+        self.worker_number: None | int = None
+        self.parallel_number: None | int = None
+        self.round: None | int = None
+        self.iid: bool = True
+        self.distribute_init_parameters: bool = True
+        # self.noise_percents: typing.Optional[list] = None
+        self.log_file: None | str = None
+        self.offload_memory: bool = False
+        self.endpoint_kwargs: dict = {}
+        self.algorithm_kwargs: dict = {}
+        self.frozen_modules: list = []
 
     def load_config_from_file(self, conf):
         DefaultConfig.load_config(self, conf)
-        if self.iid:
-            assert self.noise_percents is None
-        else:
-            if self.noise_percents is not None:
-                assert isinstance(self.noise_percents, list)
-                assert len(self.noise_percents) == self.worker_number
+        # if self.iid:
+        #     assert self.noise_percents is None
+        # else:
+        #     if self.noise_percents is not None:
+        #         assert isinstance(self.noise_percents, list)
+        #         assert len(self.noise_percents) == self.worker_number
         task_time = datetime.datetime.now()
         date_time = "{date:%Y-%m-%d_%H_%M_%S}".format(date=task_time)
         log_suffix = self.algorithm_kwargs.get("log_suffix", "")
@@ -49,18 +48,30 @@ class ExperimentConfig(DefaultConfig):
 
     def create_trainer(self, *args, **kwargs):
         trainer = super().create_trainer(*args, **kwargs)
-        if self.use_amp:
-            trainer.set_amp()
         for module in self.frozen_modules:
             trainer.model_util.freeze_modules(module_name=module)
         return trainer
 
 
-global_config = ExperimentConfig()
+global_config: DistributedTrainingConfig = DistributedTrainingConfig()
 
 
 @hydra.main(config_path="conf", version_base=None)
 def load_config(conf) -> None:
-    if len(conf) == 1:
-        conf = next(iter(conf.values()))
+    conf = next(iter(conf.values()))
     global_config.load_config_from_file(conf)
+
+
+def load_config_from_file(dataset_name: str, distributed_algorithm: str):
+    config_path = (
+        os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "conf",
+            distributed_algorithm,
+            dataset_name,
+        )
+        + ".yaml"
+    )
+    conf = OmegaConf.load(config_path)
+    global_config.load_config_from_file(conf)
+    return global_config

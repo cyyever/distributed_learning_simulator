@@ -1,6 +1,3 @@
-import copy
-
-from cyy_naive_lib.log import get_logger
 from cyy_naive_lib.storage import DataStorage
 
 from .aggregation_algorithm import AggregationAlgorithm

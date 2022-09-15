@@ -13,7 +13,7 @@ class FedAVGServer(AggregationServer):
             kwargs["algorithm"] = FedAVGAlgorithm()
         super().__init__(*args, **kwargs)
         self._compute_stat: bool = True
-        self.__stat = {}
+        self.__stat: dict = {}
         self.__plateau = 0
         self.__max_acc = 0
         self._early_stop = self.config.algorithm_kwargs.get("early_stop", False)
@@ -27,6 +27,10 @@ class FedAVGServer(AggregationServer):
         if self._early_stop and self._convergent():
             return {"end_training": True}
         return {"parameter": parameter_dict}
+
+    @property
+    def performance_stat(self) -> dict:
+        return self.__stat
 
     def _record_compute_stat(self, parameter_dict) -> None:
         self.tester.model_util.disable_running_stats()
