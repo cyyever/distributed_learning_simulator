@@ -32,6 +32,7 @@ class Executor:
             self.__thread_data.device = get_device(
                 use_cuda_only=True, max_needed_bytes=self.__used_cuda_memory
             )
+            torch.cuda.set_device(self.__thread_data.device)
         return self.__thread_data.device
 
     def _acquire_semaphore(self):

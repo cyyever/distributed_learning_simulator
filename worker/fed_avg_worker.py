@@ -9,7 +9,7 @@ from .client import Client
 
 class FedAVGWorker(Client, AggregationWorker, ModelCache):
     _send_parameter_diff = True
-    __stop = False
+    __stopped = False
 
     def __init__(self, **kwargs):
         Client.__init__(self, **kwargs)
@@ -25,18 +25,12 @@ class FedAVGWorker(Client, AggregationWorker, ModelCache):
             self.get_result_from_server()
         self._register_aggregation()
 
-    def _load_to_memory(self):
-        super()._load_to_memory()
-        self._load_cached_model_to_memory(self.save_dir)
-
     def _offload_from_memory(self):
-        self._offload_cached_model_from_memory(self.save_dir)
+        ModelCache._save(self, self.save_dir)
         super()._offload_from_memory()
 
     def _stopped(self):
-        if super()._stopped():
-            return True
-        return self.__stop
+        return super()._stopped() or self.__stopped
 
     def get_result_from_server(self):
         while True:
@@ -66,7 +60,7 @@ class FedAVGWorker(Client, AggregationWorker, ModelCache):
 
     def load_result_from_server(self, result):
         if "end_training" in result:
-            self.__stop = True
+            self.__stopped = True
             raise StopExecutingException()
         self._load_parameters(result["parameter"])
         self.cache_parameter_dict(self.trainer.model_util.get_parameter_dict())

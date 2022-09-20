@@ -101,6 +101,17 @@ class PersistentPractitioner(Practitioner):
             result[phase] = sum(dataset_util.iid_sample(percentage).values(), start=[])
         self.add_dataset_collection(name, result)
 
+    def non_iid_sample_dataset(self, name: str, percents: list[float]) -> None:
+        config = DatasetCollectionConfig(dataset_name=name)
+        dc = config.create_dataset_collection()
+        result: dict = {}
+        for phase in MachineLearningPhase:
+            dataset_util = dc.get_dataset_util(phase=phase)
+            result[phase] = sum(
+                dataset_util.sample_by_labels(percents).values(), start=[]
+            )
+        self.add_dataset_collection(name, result)
+
     def add_dataset_collection(self, *args, **kwargs):
         super().add_dataset_collection(*args, **kwargs)
         self.__store_datasets()

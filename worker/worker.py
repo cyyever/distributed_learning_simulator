@@ -60,17 +60,17 @@ class Worker(Executor):
             if first_training:
                 self._before_training()
                 first_training = False
-            else:
-                self.trainer.disable_logger()
-            self.trainer.set_device(
-                self._get_device(
-                    lock_callback=lambda: self.trainer.append_named_hook(
-                        ModelExecutorHookPoint.AFTER_BATCH,
-                        "release_device_lock",
-                        self._release_device_lock,
+                self.trainer.set_device(
+                    self._get_device(
+                        lock_callback=lambda: self.trainer.append_named_hook(
+                            ModelExecutorHookPoint.AFTER_BATCH,
+                            "release_device_lock",
+                            self._release_device_lock,
+                        )
                     )
                 )
-            )
+            else:
+                self.trainer.disable_logger()
             MetricLogger.prefix = "round:" + str(self._round_num) + ","
             self.trainer.visualizer.set_session_name(f"round_{self._round_num}")
             self.trainer.train(**kwargs)

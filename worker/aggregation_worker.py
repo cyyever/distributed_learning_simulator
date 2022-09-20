@@ -1,10 +1,7 @@
-import copy
-
 from cyy_naive_lib.log import get_logger
-from cyy_torch_toolbox.device import put_data_to_device
 from cyy_torch_toolbox.ml_type import ModelExecutorHookPoint
 from cyy_torch_toolbox.model_util import ModelUtil
-from cyy_torch_toolbox.tensor import get_tensor_serialization_size
+from cyy_torch_toolbox.tensor import tensor_to
 from util.model import load_parameters
 
 
@@ -29,7 +26,6 @@ class AggregationWorker:
     def __aggretation_impl(self, **kwargs):
         if not self._should_aggregate(**kwargs):
             return
-        model_executor = kwargs["model_executor"]
         epoch = kwargs["epoch"]
         get_logger().debug("aggregation on epoch %s", epoch)
 
@@ -45,11 +41,7 @@ class AggregationWorker:
             get_logger().debug("use best model")
             if self.trainer.best_model is not None:
                 model_util = ModelUtil(self.trainer.best_model)
-        return {
-            "parameter": put_data_to_device(
-                model_util.get_parameter_dict(), device="cpu"
-            )
-        }
+        return {"parameter": tensor_to(model_util.get_parameter_dict(), device="cpu")}
 
     def _load_parameters(self, parameters):
         load_parameters(

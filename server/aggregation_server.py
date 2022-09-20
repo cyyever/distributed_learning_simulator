@@ -4,7 +4,8 @@ import pickle
 
 from cyy_naive_lib.log import get_logger
 from cyy_naive_lib.storage import DataStorage
-from cyy_torch_toolbox.device import get_cpu_device, put_data_to_device
+from cyy_torch_toolbox.device import get_cpu_device
+from cyy_torch_toolbox.tensor import tensor_to
 from util.model_cache import ModelCache
 
 from .server import Server
@@ -12,7 +13,8 @@ from .server import Server
 
 class AggregationServer(Server, ModelCache):
     def __init__(self, algorithm, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        Server.__init__(self, *args, **kwargs)
+        ModelCache.__init__(self)
         self._round_number = 0
         self._send_parameter_diff = False
         self.__worker_data: dict[int, DataStorage | None] = {}
@@ -33,7 +35,7 @@ class AggregationServer(Server, ModelCache):
             else:
                 self.cache_parameter_dict(
                     copy.deepcopy(
-                        put_data_to_device(
+                        tensor_to(
                             self.tester.model_util.get_parameter_dict(),
                             device=get_cpu_device(),
                         )

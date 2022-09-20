@@ -18,7 +18,7 @@ class DistributedTrainingConfig(DefaultConfig):
         self.distribute_init_parameters: bool = True
         # self.noise_percents: typing.Optional[list] = None
         self.log_file: None | str = None
-        self.offload_memory: bool = False
+        self.offload_memory: bool = True
         self.endpoint_kwargs: dict = {}
         self.algorithm_kwargs: dict = {}
         self.frozen_modules: list = []
