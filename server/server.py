@@ -7,8 +7,11 @@ from executor import Executor
 
 
 class Server(Executor):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs, name="server")
+    def __init__(self, task_id, **kwargs):
+        name = "server"
+        if task_id is not None:
+            name = f"server of {task_id}"
+        super().__init__(**kwargs, name=name)
         self.__tester: None | ModelExecutor = None
 
     @property
@@ -17,6 +20,12 @@ class Server(Executor):
             self.__tester = self.config.create_inferencer(
                 phase=MachineLearningPhase.Test
             )
+            self.__tester.dataset_collection.remove_dataset(
+                phase=MachineLearningPhase.Training
+            )
+            self.__tester.dataset_collection.remove_dataset(
+                phase=MachineLearningPhase.Validation
+            )
             self.__tester.disable_logger()
         return self.__tester
 
@@ -24,6 +33,7 @@ class Server(Executor):
         if "parameter" in parameter_dict:
             parameter_dict = parameter_dict["parameter"]
         self.tester.model_util.load_parameter_dict(parameter_dict)
+        self.tester.model_util.disable_running_stats()
         self.tester.set_device(self._get_device())
         self.tester.inference(epoch=1)
         metric = {

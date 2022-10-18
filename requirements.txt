@@ -1,5 +1,10 @@
 hydra-core
 gevent
+colorlog
+psutil
+FileLock-git
+requests
+tqdm
 git+ssh://git@github.com/cyyever/torch_toolbox.git@main#egg=cyy_torch_toolbox
 git+ssh://git@github.com/cyyever/torch_algorithm.git@main#egg=cyy_torch_algorithm
 git+ssh://git@github.com/cyyever/naive_python_lib.git@main#egg=cyy_naive_lib

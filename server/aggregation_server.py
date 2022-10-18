@@ -1,4 +1,3 @@
-import copy
 import os
 import pickle
 
@@ -34,11 +33,9 @@ class AggregationServer(Server, ModelCache):
                     self.cache_parameter_dict(pickle.load(f))
             else:
                 self.cache_parameter_dict(
-                    copy.deepcopy(
-                        tensor_to(
-                            self.tester.model_util.get_parameter_dict(),
-                            device=get_cpu_device(),
-                        )
+                    tensor_to(
+                        self.tester.model_util.get_parameter_dict(),
+                        device=get_cpu_device(),
                     )
                 )
                 # save GPU memory
@@ -52,12 +49,12 @@ class AggregationServer(Server, ModelCache):
     def _process_worker_data(self, worker_id, data):
         assert 0 <= worker_id < self.worker_number
         if data is not None:
+            data = tensor_to(data, device=get_cpu_device())
             os.makedirs(os.path.join(self.save_dir, "worker_data"), exist_ok=True)
             data = DataStorage(
                 data=data,
                 data_path=os.path.join(self.save_dir, "worker_data", str(worker_id)),
             )
-            data.save()
         self.__worker_data[worker_id] = data
         if len(self.__worker_data) == self.worker_number:
             self._round_number += 1

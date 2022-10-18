@@ -9,10 +9,13 @@ from executor import Executor
 class Worker(Executor):
     semaphore = gevent.lock.BoundedSemaphore(value=1)
 
-    def __init__(self, config, worker_id: int, trainer: Trainer, endpoint, **kwargs):
-        super().__init__(
-            config=config, endpoint=endpoint, name=f"worker {worker_id}", **kwargs
-        )
+    def __init__(
+        self, task_id, config, worker_id: int, trainer: Trainer, endpoint, **kwargs
+    ):
+        name = f"worker {worker_id}"
+        if task_id is not None:
+            name = f"worker {worker_id} of {task_id}"
+        super().__init__(config=config, endpoint=endpoint, name=name, **kwargs)
         self.__worker_id = worker_id
         self.__trainer = trainer
         self.__trainer.visualizer.disable()
@@ -29,11 +32,14 @@ class Worker(Executor):
         return self.__trainer
 
     def _offload_from_memory(self):
+        self.__trainer.offload_from_gpu()
+        return
         if self.__trainer_in_memory:
             self.__trainer.offload_from_memory()
             self.__trainer_in_memory = False
 
     def _load_to_memory(self):
+        return
         if not self.__trainer_in_memory:
             self.__trainer.load_to_memory()
             self.__trainer_in_memory = True
@@ -44,7 +50,15 @@ class Worker(Executor):
         super()._release_semaphore()
 
     def _before_training(self):
-        pass
+        self.trainer.set_device(
+            self._get_device(
+                lock_callback=lambda: self.trainer.append_named_hook(
+                    ModelExecutorHookPoint.AFTER_BATCH,
+                    "release_device_lock",
+                    self._release_device_lock,
+                )
+            )
+        )
 
     def _stopped(self) -> bool:
         return self._round_num > self.config.round
@@ -60,15 +74,6 @@ class Worker(Executor):
             if first_training:
                 self._before_training()
                 first_training = False
-                self.trainer.set_device(
-                    self._get_device(
-                        lock_callback=lambda: self.trainer.append_named_hook(
-                            ModelExecutorHookPoint.AFTER_BATCH,
-                            "release_device_lock",
-                            self._release_device_lock,
-                        )
-                    )
-                )
             else:
                 self.trainer.disable_logger()
             MetricLogger.prefix = "round:" + str(self._round_num) + ","

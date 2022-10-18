@@ -41,7 +41,7 @@ class AggregationWorker:
             get_logger().debug("use best model")
             if self.trainer.best_model is not None:
                 model_util = ModelUtil(self.trainer.best_model)
-        return {"parameter": tensor_to(model_util.get_parameter_dict(), device="cpu")}
+        return {"parameter": model_util.get_parameter_dict()}
 
     def _load_parameters(self, parameters):
         load_parameters(

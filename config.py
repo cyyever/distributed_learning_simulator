@@ -4,7 +4,8 @@ import uuid
 
 import hydra
 from cyy_torch_toolbox.default_config import DefaultConfig
-from omegaconf import OmegaConf
+
+# from omegaconf import OmegaConf
 
 
 class DistributedTrainingConfig(DefaultConfig):
@@ -18,19 +19,13 @@ class DistributedTrainingConfig(DefaultConfig):
         self.distribute_init_parameters: bool = True
         # self.noise_percents: typing.Optional[list] = None
         self.log_file: None | str = None
-        self.offload_memory: bool = True
+        self.offload_memory: bool = False
         self.endpoint_kwargs: dict = {}
         self.algorithm_kwargs: dict = {}
         self.frozen_modules: list = []
 
-    def load_config_from_file(self, conf):
+    def load_config_from_file(self, conf) -> None:
         DefaultConfig.load_config(self, conf)
-        # if self.iid:
-        #     assert self.noise_percents is None
-        # else:
-        #     if self.noise_percents is not None:
-        #         assert isinstance(self.noise_percents, list)
-        #         assert len(self.noise_percents) == self.worker_number
         task_time = datetime.datetime.now()
         date_time = "{date:%Y-%m-%d_%H_%M_%S}".format(date=task_time)
         log_suffix = self.algorithm_kwargs.get("log_suffix", "")
@@ -62,16 +57,16 @@ def load_config(conf) -> None:
     global_config.load_config_from_file(conf)
 
 
-def load_config_from_file(dataset_name: str, distributed_algorithm: str):
-    config_path = (
-        os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "conf",
-            distributed_algorithm,
-            dataset_name,
-        )
-        + ".yaml"
-    )
-    conf = OmegaConf.load(config_path)
-    global_config.load_config_from_file(conf)
-    return global_config
+# def load_config_from_file(dataset_name: str, distributed_algorithm: str):
+#     config_path = (
+#         os.path.join(
+#             os.path.dirname(os.path.realpath(__file__)),
+#             "conf",
+#             distributed_algorithm,
+#             dataset_name,
+#         )
+#         + ".yaml"
+#     )
+#     conf = OmegaConf.load(config_path)
+#     global_config.load_config_from_file(conf)
+#     return global_config

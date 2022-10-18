@@ -1,22 +1,21 @@
 from algorithm.fed_obd_phase import Phase
-from algorithm.obd_algorithm import OpportunisticBlockDropoutAlgorithm
+from algorithm.random_dropout_algorithm import RandomDropoutAlgorithm
 from cyy_naive_lib.log import get_logger
 from cyy_torch_toolbox.ml_type import ModelExecutorHookPoint
 
 from .fed_avg_worker import FedAVGWorker
 
 
-class FedOBDWorker(FedAVGWorker, OpportunisticBlockDropoutAlgorithm):
+class FedOBDRandomDropoutWorker(FedAVGWorker, RandomDropoutAlgorithm):
     __phase = Phase.STAGE_ONE
     __end_training = False
 
     def __init__(self, *args, **kwargs):
         FedAVGWorker.__init__(self, *args, **kwargs)
-        OpportunisticBlockDropoutAlgorithm.__init__(
+        RandomDropoutAlgorithm.__init__(
             self, dropout_rate=self.config.algorithm_kwargs["dropout_rate"]
         )
         self._endpoint.dequant_server_data = True
-        self._find_blocks()
 
     def load_result_from_server(self, result):
         if "phase_two" in result:
@@ -61,11 +60,10 @@ class FedOBDWorker(FedAVGWorker, OpportunisticBlockDropoutAlgorithm):
     def _get_sent_data(self):
         data = super()._get_sent_data()
         if self.__phase == Phase.STAGE_ONE:
-            data["parameter"] = self.get_block_parameter(data["parameter"])
+            data["parameter"] = self.drop_parameter(data["parameter"])
             return super()._get_sent_data()
 
         self._choose_model_by_validation = False
-        # self._endpoint.quantized_keys = {"quantized_parameter_diff"}
 
         data["round"] = self._round_num
         data["check_acc"] = True

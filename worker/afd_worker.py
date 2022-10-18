@@ -30,19 +30,6 @@ class SingleModelAdaptiveFedDropoutWorker(FedAVGWorker):
         return sent_data
 
     def load_result_from_server(self, result):
-        if self.__full_parameter_keys is None:
-            self.__full_parameter_keys = set(
-                self.trainer.model_util.get_parameter_dict(detach=False).keys()
-            )
         assert result["parameter"]
         self.__parameter_keys = set(result["parameter"].keys())
         super().load_result_from_server(result)
-        # for k in self.__full_parameter_keys:
-        #     if k not in result["parameter"]:
-        #         self.trainer.model_util.set_attr(
-        #             k,
-        #             self.trainer.model_util.get_attr(k),
-        #             as_parameter=False,
-        #         )
-        #     else:
-        #         self.__parameter_keys.add(k)

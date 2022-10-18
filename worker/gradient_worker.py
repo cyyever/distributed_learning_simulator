@@ -14,7 +14,7 @@ def compute_gradient(
     params,
     d_p_list,
     weight_decay: float,
-):
+) -> list:
     real_gradient = []
     for i, param in enumerate(params):
         d_p = d_p_list[i]

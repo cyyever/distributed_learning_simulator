@@ -17,13 +17,12 @@ class FedAVGWorker(Client, AggregationWorker, ModelCache):
         ModelCache.__init__(self)
 
     def _before_training(self):
-        super()._before_training()
-        self.trainer.model_util.disable_running_stats()
         self.trainer.dataset_collection.remove_dataset(phase=MachineLearningPhase.Test)
         # load initial parameters
         if self.config.distribute_init_parameters:
             self.get_result_from_server()
         self._register_aggregation()
+        super()._before_training()
 
     def _offload_from_memory(self):
         ModelCache._save(self, self.save_dir)
@@ -50,6 +49,7 @@ class FedAVGWorker(Client, AggregationWorker, ModelCache):
             parameter_data = sent_data.pop("parameter")
             parameter_diff = self.get_parameter_diff(parameter_data)
             sent_data["parameter_diff"] = parameter_diff
+        self.discard_model_cache()
         self.send_data_to_server(sent_data)
         self.get_result_from_server()
 
@@ -64,4 +64,3 @@ class FedAVGWorker(Client, AggregationWorker, ModelCache):
             raise StopExecutingException()
         self._load_parameters(result["parameter"])
         self.cache_parameter_dict(self.trainer.model_util.get_parameter_dict())
-        self.trainer.model_util.disable_running_stats()

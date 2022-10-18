@@ -25,6 +25,7 @@ from util.data_spliting import DataSplitter
 from worker.afd_worker import SingleModelAdaptiveFedDropoutWorker
 from worker.fed_avg_worker import FedAVGWorker
 from worker.fed_dropout_avg_worker import FedDropoutAvgWorker
+from worker.fed_obd_random_dropout_worker import FedOBDRandomDropoutWorker
 from worker.fed_obd_worker import FedOBDWorker
 from worker.qsgd_worker import QSGDWorker
 from worker.sign_sgd_worker import SignSGDWorker
@@ -35,6 +36,12 @@ cs_constructors: dict[str, tuple] = {
     "fed_avg": (FedAVGWorker, FedAVGServer),
     "fed_obd": (
         FedOBDWorker,
+        FedOBDServer,
+        NNADQClientEndpoint,
+        NNADQServerEndpoint,
+    ),
+    "fed_obd_random_dropout": (
+        FedOBDRandomDropoutWorker,
         FedOBDServer,
         NNADQClientEndpoint,
         NNADQServerEndpoint,

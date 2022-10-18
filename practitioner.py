@@ -22,6 +22,7 @@ class Practitioner:
 
     def create_worker(
         self,
+        task_id,
         worker_constructor,
         config,
         worker_id,
@@ -42,6 +43,7 @@ class Practitioner:
             )
 
         return worker_constructor(
+            task_id=task_id,
             config=config,
             trainer=trainer,
             worker_id=worker_id,

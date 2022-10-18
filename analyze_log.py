@@ -1,11 +1,13 @@
-import argparse
 import os
 import re
 
 import torch
 
+from config import global_config as config
+from config import load_config
 
-def compute_acc(paths, args):
+
+def compute_acc(paths):
     final_test_acc = []
     worker_acc: dict = {}
     for path in paths:
@@ -14,19 +16,22 @@ def compute_acc(paths, args):
         with open(path, "rt", encoding="utf8") as f:
             lines = f.readlines()
         for line in reversed(lines):
-            if args.a == "sign_SGD":
+            if config.distributed_algorithm == "sign_SGD":
                 if "test loss" in line:
                     res = re.findall("[0-9.]+%", line)
                     assert len(res) == 1
                     acc = float(res[0].replace("%", ""))
                     final_test_acc.append(acc)
                     break
-            elif args.a == "fed_obd_first_stage":
-                if "test accuracy is" in line and "round " + str(args.r) in line:
+            elif config.distributed_algorithm in (
+                "fed_obd_first_stage",
+                "fed_obd_layer",
+            ):
+                if "test accuracy is" in line and "round " + str(config.round) in line:
                     res = re.findall("[0-9.]+%", line)
                     assert len(res) == 1
                     acc = float(res[0].replace("%", ""))
-                    # print(line)
+                    print(line)
                     final_test_acc.append(acc)
                     break
             else:
@@ -37,7 +42,7 @@ def compute_acc(paths, args):
                     print(line)
                     final_test_acc.append(acc)
                     break
-        for worker_id in range(args.w):
+        for worker_id in range(config.worker_number):
             for line in reversed(lines):
                 res = re.findall(f"worker {worker_id}.*train.*accuracy", line)
                 if res:
@@ -54,26 +59,17 @@ def compute_acc(paths, args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-a", type=str, required=True, help="algorithm")
-    parser.add_argument("-w", type=int, required=True, help="worker number")
-    parser.add_argument(
-        "-k", type=int, required=False, default=None, help="worker subset number"
-    )
-    parser.add_argument("-r", type=int, required=True, help="round number")
-    parser.add_argument(
-        "-sl", type=int, default=None, help="local epoch of second stage"
-    )
-    parser.add_argument("-d", type=float, help="droupout rate")
-    parser.add_argument("-f", type=str, required=True, help="logfiles")
-    args = parser.parse_args()
-    paths = args.f.split(" ")
+    load_config()
+    paths = os.getenv("logfiles").split(" ")
+    assert paths
+    compute_acc(paths)
 
-    compute_acc(paths, args)
-
-    if args.a.lower() == "fed_obd":
-        assert args.k is not None
-        total_msg = args.r * args.k * 2 + args.sl * args.w * 2 + args.w
+    if config.distributed_algorithm.lower() == "fed_obd":
+        total_msg = (
+            config.round * config.algorithm_kwargs["random_client_number"] * 2
+            + config.algorithm_kwargs["second_phase_epoch"] * config.worker_number * 2
+            + config.worker_number
+        )
         print("total_msg is", total_msg)
 
         avg_compression = []
@@ -91,43 +87,60 @@ if __name__ == "__main__":
                     assert len(res) == 1
                     broadcast_ratio = float(res[0].replace("(", "").replace(",", ""))
                     rnd_cnt += 1
-                    if rnd_cnt <= args.r:
-                        compressed_part += broadcast_ratio * args.k
-                        remain_msg -= args.k
+                    if rnd_cnt <= config.round:
+                        compressed_part += (
+                            broadcast_ratio
+                            * config.algorithm_kwargs["random_client_number"]
+                        )
+                        remain_msg -= config.algorithm_kwargs["random_client_number"]
                     else:
                         stage_one = False
-                        compressed_part += broadcast_ratio * args.w
-                        remain_msg -= args.w
+                        compressed_part += broadcast_ratio * config.worker_number
+                        remain_msg -= config.worker_number
                 if "worker NNABQ compression ratio" in line:
                     res = re.findall("[0-9.]+$", line)
                     assert len(res) == 1
                     worker_ratio = float(res[0].replace("(", "").replace(",", ""))
                     if stage_one:
-                        worker_ratio *= 1 - args.d
+                        worker_ratio *= 1 - config.algorithm_kwargs["dropout_rate"]
                     compressed_part += worker_ratio
                     remain_msg -= 1
             print("remain_msg is", remain_msg, "path is", path)
-            assert remain_msg == args.w
+            assert remain_msg == config.worker_number
             compressed_part += remain_msg
             avg_compression.append(compressed_part / total_msg)
         assert len(avg_compression) == len(paths)
         std, mean = torch.std_mean(torch.tensor(avg_compression))
         print("compression", mean, std)
-    elif args.a.lower() == "fed_obd_sq":
-        total_msg = args.r * args.k * 2 + args.sl * args.w * 2 + args.w
+        print("communication overhead", total_msg * mean, total_msg * std)
+    elif config.distributed_algorithm.lower() == "fed_obd_sq":
+        total_msg = (
+            config.round * config.algorithm_kwargs["random_client_number"] * 2
+            + config.algorithm_kwargs["second_phase_epoch"] * config.worker_number * 2
+            + config.worker_number
+        )
         print("total_msg is", total_msg)
 
         compression = (
-            args.r * args.k * (1 - args.d) / 4
-            + args.r * args.k / 4
-            + args.sl * args.w * 2 / 4
-            + args.w
+            config.round
+            * config.algorithm_kwargs["random_client_number"]
+            * (1 - config.algorithm_kwargs["dropout_rate"])
+            / 4
+            + config.round * config.algorithm_kwargs["random_client_number"] / 4
+            + config.algorithm_kwargs["second_phase_epoch"]
+            * config.worker_number
+            * 2
+            / 4
+            + config.worker_number
         ) / total_msg
 
         print("compression", compression)
         print("co", total_msg * compression)
-    if args.a.lower() == "fed_dropout_avg":
-        total_msg = args.r * args.k * 2 + args.w
+    if config.distributed_algorithm.lower() == "fed_dropout_avg":
+        total_msg = (
+            config.round * config.algorithm_kwargs["random_client_number"] * 2
+            + config.worker_number
+        )
         print("total_msg is", total_msg)
 
         total_number = 0
@@ -149,13 +162,16 @@ if __name__ == "__main__":
                     parameter_number = float(res[0])
                     total_number += float(res[0])
             avg_compression.append(
-                (transfer_number + args.w * parameter_number)
-                / (total_number + args.w * parameter_number)
+                (transfer_number + config.worker_number * parameter_number)
+                / (total_number + config.worker_number * parameter_number)
             )
         std, mean = torch.std_mean(torch.tensor(avg_compression))
         print("compression", mean, std)
-    if args.a.lower() == "afd":
-        total_msg = args.r * args.k * 2 + args.w
+    if config.distributed_algorithm.lower() == "afd":
+        total_msg = (
+            config.round * config.algorithm_kwargs["random_client_number"] * 2
+            + config.worker_number
+        )
         print("total_msg is", total_msg)
 
         total_number = 0
@@ -178,15 +194,18 @@ if __name__ == "__main__":
                     assert len(res) == 1
                     parameter_number = float(res[0])
             avg_compression.append(
-                (transfer_number + args.w * parameter_number)
-                / (total_number + args.w * parameter_number)
+                (transfer_number + config.worker_number * parameter_number)
+                / (total_number + config.worker_number * parameter_number)
             )
         std, mean = torch.std_mean(torch.tensor(avg_compression))
         print("compression", mean, std)
 
-    if args.a.lower() == "fed_obd_first_stage":
-        assert args.k is not None
-        total_msg = args.r * args.k * 2 + args.w
+    if config.distributed_algorithm.lower() == "fed_obd_first_stage":
+        assert config.algorithm_kwargs["random_client_number"] is not None
+        total_msg = (
+            config.round * config.algorithm_kwargs["random_client_number"] * 2
+            + config.worker_number
+        )
         print("total_msg is", total_msg)
 
         avg_compression = []
@@ -205,17 +224,20 @@ if __name__ == "__main__":
                     assert len(res) == 1
                     broadcast_ratio = float(res[0].replace("(", "").replace(",", ""))
                     rnd_cnt += 1
-                    if rnd_cnt <= args.r:
-                        compressed_part += broadcast_ratio * args.k
-                        remain_msg -= args.k
+                    if rnd_cnt <= config.round:
+                        compressed_part += (
+                            broadcast_ratio
+                            * config.algorithm_kwargs["random_client_number"]
+                        )
+                        remain_msg -= config.algorithm_kwargs["random_client_number"]
                 if "worker NNABQ compression ratio" in line:
                     res = re.findall("[0-9.]+$", line)
                     assert len(res) == 1
                     worker_ratio = float(res[0].replace("(", "").replace(",", ""))
-                    worker_ratio *= 1 - args.d
+                    worker_ratio *= 1 - config.algorithm_kwargs["dropout_rate"]
                     compressed_part += worker_ratio
                     remain_msg -= 1
-            assert remain_msg == args.w
+            assert remain_msg == config.worker_number
             # print("remain_msg is", remain_msg, "path is", path)
             compressed_part += remain_msg
             avg_compression.append(compressed_part / total_msg)

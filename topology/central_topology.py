@@ -40,7 +40,10 @@ class ProcessCentralTopology(CentralTopology):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.__queue = TorchProcessTaskQueue(
-            worker_num=0, move_data_in_cpu=True, use_manager=False
+            worker_num=0,
+            send_tensor_in_cpu=True,
+            use_manager=False,
+            assemble_tensor=True,
         )
         for worker_id in range(self.worker_num):
             self.__queue.add_queue(f"result_{worker_id}")
@@ -70,7 +73,7 @@ class ProcessCentralTopology(CentralTopology):
         self.__queue.put_data(data, queue_name=f"request_{worker_id}")
 
     def send_to_worker(self, data, worker_id):
-        self.__queue.put_data(result=data, queue_name=f"result_{worker_id}")
+        self.__queue.put_data(data=data, queue_name=f"result_{worker_id}")
 
     def wait_close(self):
         self.__queue.join()

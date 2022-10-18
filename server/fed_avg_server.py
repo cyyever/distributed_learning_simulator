@@ -33,7 +33,6 @@ class FedAVGServer(AggregationServer):
         return self.__stat
 
     def _record_compute_stat(self, parameter_dict) -> None:
-        self.tester.model_util.disable_running_stats()
         metric = self.get_metric(parameter_dict)
 
         round_stat = {}

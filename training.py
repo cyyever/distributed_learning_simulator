@@ -23,7 +23,7 @@ def process_initializer(device_lock, topology):
 
 
 def start_executors(
-    worker_configs: list[dict], server_config: None | dict = None
+    task_id: int | None, worker_configs: list[dict], server_config: None | dict = None
 ) -> dict:
     global local_data
     device_lock = local_data.device_lock
@@ -35,7 +35,10 @@ def start_executors(
         practitioner = worker_config.pop("practitioner")
         workers.append(
             practitioner.create_worker(
-                **worker_config, device_lock=device_lock, topology=topology
+                **worker_config,
+                device_lock=device_lock,
+                topology=topology,
+                task_id=task_id,
             )
         )
     if server_config is not None:
@@ -44,7 +47,9 @@ def start_executors(
         server_constructor = server_config.pop("server_constructor")
         workers.append(
             server_constructor(
-                device_lock=device_lock, endpoint=endpoint_cls(topology=topology)
+                task_id=task_id,
+                device_lock=device_lock,
+                endpoint=endpoint_cls(topology=topology),
             )
         )
 
@@ -85,6 +90,9 @@ def train(
     worker_config = get_worker_config(config, practitioner_ids=practitioner_ids)
     topology = worker_config.pop("topology")
     device_lock = multiprocessing.Manager().RLock()
+    task_id: int | None = None
+    if non_blocking:
+        task_id = uuid.uuid4().int
     process_pool = TorchProcessPool(
         initializer=process_initializer, initargs=(device_lock, topology)
     )
@@ -93,12 +101,14 @@ def train(
         if process_idx == 0:
             server_config = worker_config.get("server_config", None)
         process_pool.exec(
-            start_executors, worker_configs=worker_configs, server_config=server_config
+            start_executors,
+            task_id=task_id,
+            worker_configs=worker_configs,
+            server_config=server_config,
         )
     if not non_blocking:
         process_pool.stop()
         return None
-    task_id: int = uuid.uuid4().int
     tasks[task_id] = {
         "process_pool": process_pool,
         "practitioner_ids": practitioner_ids,
