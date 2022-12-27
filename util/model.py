@@ -4,15 +4,6 @@ from cyy_torch_toolbox.model_util import ModelUtil
 from cyy_torch_toolbox.trainer import Trainer
 
 
-def drop_normalization(model_util):
-    get_logger().warning("remove BatchNorm")
-    for module_type in (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d):
-        model_util.change_modules(
-            module_type=module_type,
-            f=lambda name, _, __: model_util.register_module(name, nn.Identity()),
-        )
-
-
 def load_parameters(
     trainer: Trainer, parameter_dict: dict, reuse_learning_rate: bool
 ) -> None:
@@ -30,7 +21,7 @@ def load_parameters(
                 get_logger().debug("reuse parameter property %s", k)
     else:
         trainer.load_parameter_dict(parameter_dict)
-    trainer.model_util.reset_running_stats()
+    trainer.model_util.disable_running_stats()
 
 
 def get_module_blocks(
@@ -42,6 +33,7 @@ def get_module_blocks(
             ("AlbertTransformer",),
             ("AlbertEmbeddings",),
             ("Bottleneck",),
+            ("TransformerEncoderLayer",),
             (nn.Conv2d, nn.BatchNorm2d, nn.ReLU, nn.MaxPool2d),
             (nn.Conv2d, nn.BatchNorm2d, nn.ReLU),
             (nn.Conv2d, nn.ReLU, nn.MaxPool2d),

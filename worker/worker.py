@@ -1,3 +1,5 @@
+from typing import Any
+
 import gevent.lock
 from cyy_naive_lib.log import get_logger
 from cyy_torch_toolbox.metric_visualizers.metric_logger import MetricLogger
@@ -10,17 +12,21 @@ class Worker(Executor):
     semaphore = gevent.lock.BoundedSemaphore(value=1)
 
     def __init__(
-        self, task_id, config, worker_id: int, trainer: Trainer, endpoint, **kwargs
+        self,
+        task_id: Any,
+        worker_id: int,
+        trainer: Trainer,
+        **kwargs: dict,
     ):
         name = f"worker {worker_id}"
         if task_id is not None:
             name = f"worker {worker_id} of {task_id}"
-        super().__init__(config=config, endpoint=endpoint, name=name, **kwargs)
+        super().__init__(name=name, **kwargs)
         self.__worker_id = worker_id
         self.__trainer = trainer
         self.__trainer.visualizer.disable()
         self._round_num = 0
-        self.__trainer_in_memory: bool = True
+        self._force_stop = False
 
     @property
     def worker_id(self):
@@ -28,21 +34,10 @@ class Worker(Executor):
 
     @property
     def trainer(self):
-        self._load_to_memory()
         return self.__trainer
 
     def _offload_from_memory(self):
         self.__trainer.offload_from_gpu()
-        return
-        if self.__trainer_in_memory:
-            self.__trainer.offload_from_memory()
-            self.__trainer_in_memory = False
-
-    def _load_to_memory(self):
-        return
-        if not self.__trainer_in_memory:
-            self.__trainer.load_to_memory()
-            self.__trainer_in_memory = True
 
     def _release_semaphore(self) -> None:
         if self.config.offload_memory:
@@ -50,6 +45,7 @@ class Worker(Executor):
         super()._release_semaphore()
 
     def _before_training(self):
+        self._force_stop = False
         self.trainer.set_device(
             self._get_device(
                 lock_callback=lambda: self.trainer.append_named_hook(
@@ -61,13 +57,13 @@ class Worker(Executor):
         )
 
     def _stopped(self) -> bool:
-        return self._round_num > self.config.round
+        return self._round_num > self.config.round or self._force_stop
 
     def start(self, **kwargs):
         first_training: bool = True
         self._round_num = 1
         while True:
-            # in case worker changes round
+            # in case worker changes round number
             if self._stopped():
                 break
             self._acquire_semaphore()

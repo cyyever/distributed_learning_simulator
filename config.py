@@ -4,20 +4,18 @@ import uuid
 
 import hydra
 from cyy_torch_toolbox.default_config import DefaultConfig
-
-# from omegaconf import OmegaConf
+from cyy_torch_toolbox.device import get_devices
 
 
 class DistributedTrainingConfig(DefaultConfig):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.distributed_algorithm: str = None
-        self.worker_number: None | int = None
-        self.parallel_number: None | int = None
-        self.round: None | int = None
+        self.distributed_algorithm: str = ""
+        self.worker_number: int = 0
+        self.parallel_number: int = len(get_devices())
+        self.round: int = 0
         self.iid: bool = True
         self.distribute_init_parameters: bool = True
-        # self.noise_percents: typing.Optional[list] = None
         self.log_file: None | str = None
         self.offload_memory: bool = False
         self.endpoint_kwargs: dict = {}
@@ -55,18 +53,3 @@ global_config: DistributedTrainingConfig = DistributedTrainingConfig()
 def load_config(conf) -> None:
     conf = next(iter(conf.values()))
     global_config.load_config_from_file(conf)
-
-
-# def load_config_from_file(dataset_name: str, distributed_algorithm: str):
-#     config_path = (
-#         os.path.join(
-#             os.path.dirname(os.path.realpath(__file__)),
-#             "conf",
-#             distributed_algorithm,
-#             dataset_name,
-#         )
-#         + ".yaml"
-#     )
-#     conf = OmegaConf.load(config_path)
-#     global_config.load_config_from_file(conf)
-#     return global_config

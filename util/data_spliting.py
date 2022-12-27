@@ -1,13 +1,14 @@
 from cyy_naive_lib.log import get_logger
 # from cyy_torch_toolbox.dataset import sub_dataset
 # from cyy_torch_toolbox.dataset_transform.transforms import replace_target
-from cyy_torch_toolbox.ml_type import MachineLearningPhase, TransformType
+# , TransformType
+from cyy_torch_toolbox.ml_type import MachineLearningPhase
 
 
 class DataSplitter:
     def __init__(self, config):
         self.__config = config
-        dc = config.create_dataset_collection()
+        dc = self.__config.create_dataset_collection()
         parts = [1] * config.worker_number
         self.__dataset_indices = {}
         for phase in MachineLearningPhase:

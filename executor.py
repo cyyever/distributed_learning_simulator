@@ -3,7 +3,6 @@ import multiprocessing
 import os
 import threading
 
-import gevent
 import gevent.lock
 import torch
 from cyy_torch_toolbox.device import get_device
@@ -12,15 +11,15 @@ from cyy_torch_toolbox.device import get_device
 class Executor:
     semaphore = gevent.lock.BoundedSemaphore(value=1)
     __thread_data = threading.local()
-    __hold_device_lock = False
 
-    def __init__(self, config, endpoint, name, **kwargs):
+    def __init__(self, config, endpoint, name, device_lock):
         self.config = copy.deepcopy(config)
         self._endpoint = endpoint
         self.__used_cuda_memory = None
         self.__hold_semaphore: bool = False
         self._name = name
-        self.__device_lock = kwargs.get("device_lock", None)
+        self.__device_lock = device_lock
+        self.__hold_device_lock = False
 
     def _get_device(self, lock_callback=None):
         if not hasattr(self.__thread_data, "device"):

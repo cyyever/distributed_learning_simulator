@@ -1,3 +1,5 @@
+import random
+
 import gevent
 import gevent.lock
 from cyy_naive_lib.log import get_logger
@@ -78,6 +80,13 @@ class Server(Executor):
             self._endpoint.broadcast(data=None, worker_ids=unselected_workers)
 
     def _select_workers(self) -> set:
+        if "random_client_number" in self.config.algorithm_kwargs:
+            return set(
+                random.sample(
+                    list(range(self.worker_number)),
+                    k=self.config.algorithm_kwargs["random_client_number"],
+                )
+            )
         return set(range(self.worker_number))
 
     def _stopped(self) -> bool:

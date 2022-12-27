@@ -1,10 +1,10 @@
 import json
 import os
 
-import numpy as np
 import torch
 from cyy_torch_toolbox.ml_type import ModelExecutorHookPoint
-from cyy_torch_toolbox.tensor import cat_tensors_to_vector
+from cyy_torch_toolbox.tensor import (cat_tensors_to_vector,
+                                      decompose_tensor_to_list)
 from torch.optim.sgd import SGD
 
 from .client import Client
@@ -45,7 +45,7 @@ class GradientWorker(Client):
         self.send_data_to_server({"end_training": True})
 
     def _process_gradient(self, gradient):
-        raise NotImplementedError()
+        return gradient
 
     def __step(self, model_executor):
         trainer = model_executor
@@ -75,31 +75,25 @@ class GradientWorker(Client):
                         else:
                             momentum_buffer_list.append(state["momentum_buffer"])
 
-                gradient = compute_gradient(
+                gradient_list = compute_gradient(
                     params_with_grad,
                     d_p_list,
                     weight_decay,
                 )
-                gradient_shape = [p.shape for p in gradient]
+            gradient_shape = [p.shape for p in gradient_list]
 
-            processed_gradient = self._process_gradient(
-                cat_tensors_to_vector(gradient).cpu()
+            gradient = self._process_gradient(cat_tensors_to_vector(gradient_list))
+            self.send_data_to_server(
+                {"dataset_size": self.trainer.dataset_size, "gradient": gradient}
+            )
+            gradient = self._get_result_from_server()["gradient"]
+            gradient_list = decompose_tensor_to_list(
+                shapes=gradient_shape, tensor=gradient
             )
 
             with torch.no_grad():
-                bias = 0
-                gradient.clear()
-                for shape in gradient_shape:
-                    param_element_num = np.prod(shape)
-                    gradient.append(
-                        processed_gradient.narrow(0, bias, param_element_num).view(
-                            *shape
-                        )
-                    )
-                    bias += param_element_num
-
                 for d_p, param, momentum_buffer in zip(
-                    gradient, params_with_grad, momentum_buffer_list
+                    gradient_list, params_with_grad, momentum_buffer_list
                 ):
                     d_p = d_p.to(param.device)
                     if momentum != 0:

@@ -1,3 +1,4 @@
+import json
 import os
 import pickle
 
@@ -48,6 +49,11 @@ class FedAVGServer(AggregationServer):
             "round %s, test loss is %s", self.round_number, round_stat["test_loss"]
         )
         self.__stat[self.round_number] = round_stat
+        with open(
+            os.path.join(self.save_dir, "round_record.json"), "wt", encoding="utf8"
+        ) as f:
+            json.dump(self.__stat, f)
+
         max_acc = max(t["test_acc"] for t in self.__stat.values())
         if max_acc > self.__max_acc:
             self.__max_acc = max_acc

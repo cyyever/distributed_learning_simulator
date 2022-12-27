@@ -4,7 +4,6 @@ import sqlite3
 
 from cyy_torch_toolbox.dataset import sub_dataset
 from cyy_torch_toolbox.dataset_collection import DatasetCollectionConfig
-# from cyy_torch_toolbox.dataset_transform.transforms import replace_target
 from cyy_torch_toolbox.ml_type import MachineLearningPhase
 
 
@@ -20,16 +19,7 @@ class Practitioner:
     def add_dataset_collection(self, name: str, indices: dict) -> None:
         self._datasets[name] = indices
 
-    def create_worker(
-        self,
-        task_id,
-        worker_constructor,
-        config,
-        worker_id,
-        device_lock,
-        topology,
-        endpoint_cls,
-    ):
+    def create_trainer(self, config):
         trainer = config.create_trainer()
         trainer.set_save_dir(
             os.path.join(trainer.save_dir, f"worker_{self.practitioner_id}")
@@ -41,18 +31,7 @@ class Practitioner:
                     dataset, self.datasets[trainer.dataset_collection.name][phase]
                 ),
             )
-
-        return worker_constructor(
-            task_id=task_id,
-            config=config,
-            trainer=trainer,
-            worker_id=worker_id,
-            device_lock=device_lock,
-            endpoint=endpoint_cls(
-                topology=topology,
-                worker_id=worker_id,
-            ),
-        )
+        return trainer
 
 
 class PersistentPractitioner(Practitioner):
