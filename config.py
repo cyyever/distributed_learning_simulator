@@ -3,8 +3,10 @@ import os
 import uuid
 
 import hydra
+import omegaconf
 from cyy_torch_toolbox.default_config import DefaultConfig
 from cyy_torch_toolbox.device import get_devices
+from hydra.core.hydra_config import HydraConfig
 
 
 class DistributedTrainingConfig(DefaultConfig):
@@ -15,6 +17,7 @@ class DistributedTrainingConfig(DefaultConfig):
         self.parallel_number: int = len(get_devices())
         self.round: int = 0
         self.iid: bool = True
+        self.log_batch_loss: bool = False
         self.distribute_init_parameters: bool = True
         self.log_file: None | str = None
         self.offload_memory: bool = False
@@ -22,7 +25,7 @@ class DistributedTrainingConfig(DefaultConfig):
         self.algorithm_kwargs: dict = {}
         self.frozen_modules: list = []
 
-    def load_config_from_file(self, conf) -> None:
+    def load_config_and_process(self, conf) -> None:
         DefaultConfig.load_config(self, conf)
         task_time = datetime.datetime.now()
         date_time = "{date:%Y-%m-%d_%H_%M_%S}".format(date=task_time)
@@ -52,4 +55,9 @@ global_config: DistributedTrainingConfig = DistributedTrainingConfig()
 @hydra.main(config_path="conf", version_base=None)
 def load_config(conf) -> None:
     conf = next(iter(conf.values()))
-    global_config.load_config_from_file(conf)
+    global_conf_path = os.path.join(
+        HydraConfig.get().runtime.cwd, "conf", "global.yaml"
+    )
+    result_conf = omegaconf.OmegaConf.load(global_conf_path)
+    result_conf.merge_with(conf)
+    global_config.load_config_and_process(result_conf)

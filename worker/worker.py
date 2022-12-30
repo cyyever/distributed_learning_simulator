@@ -70,11 +70,13 @@ class Worker(Executor):
             if first_training:
                 self._before_training()
                 first_training = False
-            else:
+            if not first_training:
                 self.trainer.disable_logger()
             MetricLogger.prefix = "round:" + str(self._round_num) + ","
             self.trainer.visualizer.set_session_name(f"round_{self._round_num}")
-            self.trainer.train(**kwargs)
+            self.trainer.train(
+                **kwargs, batch_loss_log_times=None if self.config.log_batch_loss else 0
+            )
             self._release_semaphore()
             self._round_num += 1
         get_logger().debug("close endpoint")

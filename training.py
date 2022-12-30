@@ -100,7 +100,9 @@ def train(
     worker_config = get_worker_config(config, practitioner_ids=practitioner_ids)
     topology = worker_config.pop("topology")
     device_lock = multiprocessing.Manager().RLock()
-    task_id: int = uuid.uuid4().int
+    task_id: int | None = uuid.uuid4().int
+    if not non_blocking:
+        task_id = None
     process_pool = TorchProcessPool(
         initializer=process_initializer, initargs=(device_lock, topology)
     )

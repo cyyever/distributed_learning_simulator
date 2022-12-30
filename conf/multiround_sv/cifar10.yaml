@@ -9,6 +9,4 @@ round: 100
 learning_rate_scheduler: CosineAnnealingLR
 epoch: 5
 learning_rate: 0.1
-cache_transforms: true
-log_level: INFO
 ...

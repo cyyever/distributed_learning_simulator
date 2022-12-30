@@ -9,11 +9,8 @@ round: 100
 learning_rate_scheduler: CosineAnnealingLR
 epoch: 5
 learning_rate: 0.01
-parallel_number: 3
-cache_transforms: true
-log_level: INFO
 algorithm_kwargs:
-  dropout_rate: 0.3
+  dropout_rate: 0.9
   random_client_number: 5
 model_kwargs:
   max_len: 300

@@ -10,10 +10,6 @@ learning_rate_scheduler: CosineAnnealingLR
 epoch: 100
 batch_size: 64
 learning_rate: 0.01
-parallel_number: 2
-cache_transforms: true
-use_amp: false
-log_level: INFO
 model_kwargs:
   max_len: 300
   word_vector_name: glove.6B.100d

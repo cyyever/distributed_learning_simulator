@@ -9,10 +9,6 @@ learning_rate_scheduler: CosineAnnealingLR
 epoch: 5
 batch_size: 64
 learning_rate: 0.01
-parallel_number: 2
-use_amp: true
-cache_transforms: true
-log_level: INFO
 endpoint_kwargs:
   server:
     weight: 0.001
@@ -20,7 +16,7 @@ endpoint_kwargs:
     weight: 0.001
 algorithm_kwargs:
   second_phase_epoch: 10
-  dropout_rate: 0.3
+  dropout_rate: 0.9
   random_client_number: 5
 model_kwargs:
   max_len: 300

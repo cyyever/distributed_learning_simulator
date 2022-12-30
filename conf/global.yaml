@@ -1,0 +1,6 @@
+---
+cache_transforms: true
+log_level: INFO
+parallel_number: 8
+log_batch_loss: false
+use_amp: true

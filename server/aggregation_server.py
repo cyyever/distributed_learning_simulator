@@ -32,12 +32,7 @@ class AggregationServer(Server, ModelCache):
                 with open(os.path.join(self.__init_global_model_path), "rb") as f:
                     self.cache_parameter_dict(pickle.load(f))
             else:
-                self.cache_parameter_dict(
-                    tensor_to(
-                        self.tester.model_util.get_parameter_dict(),
-                        device=get_cpu_device(),
-                    )
-                )
+                self.cache_parameter_dict(self.tester.model_util.get_parameter_dict())
                 # save GPU memory
                 self.tester.offload_from_gpu()
             self.send_result(data={"parameter": self.cached_parameter_dict})

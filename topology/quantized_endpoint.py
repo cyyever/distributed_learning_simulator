@@ -17,7 +17,7 @@ class QuantClientEndpoint(ClientEndpoint, QuantEndpoint):
         ClientEndpoint.__init__(self, **kwargs)
         QuantEndpoint.__init__(self, quant=quant, dequant=dequant)
         self.use_quantization: bool = True
-        self.quantized_keys: None | set = None
+        self.quantized_keys: set = set(["parameter", "parameter_diff"])
         self.dequant_server_data: bool = False
 
     def get(self):
@@ -31,15 +31,16 @@ class QuantClientEndpoint(ClientEndpoint, QuantEndpoint):
             super().send(data=data)
             return
         if self.use_quantization:
-            if self.quantized_keys is not None:
-                for k in self.quantized_keys:
-                    if k in data:
-                        data[k] = self._quant(data[k])
-            else:
-                data = self._quant(data)
+            has_quantized = False
+            assert self.quantized_keys
+            for k in self.quantized_keys:
+                if k in data:
+                    data[k] = self._quant(data[k])
+                    has_quantized = True
+            assert has_quantized
             self._after_quant(data=data)
         else:
-            get_logger().warning("stop quantization")
+            get_logger().warning("client not use quantization")
         super().send(data=data)
 
     def _after_quant(self, data):
@@ -51,12 +52,12 @@ class QuantServerEndpoint(ServerEndpoint, QuantEndpoint):
         ServerEndpoint.__init__(self, **kwargs)
         QuantEndpoint.__init__(self, quant=quant, dequant=dequant)
         self.quant_broadcast: bool = False
-        self.client_quantized_keys: None | set = None
+        self.client_quantized_keys: set = set(["parameter", "parameter_diff"])
 
     def get(self, worker_id):
         data = super().get(worker_id=worker_id)
-        if self.client_quantized_keys is None:
-            return self._dequant(data)
+        if data is None:
+            return data
         for k in self.client_quantized_keys:
             if k in data:
                 data[k] = self._dequant(data[k])
@@ -68,7 +69,7 @@ class QuantServerEndpoint(ServerEndpoint, QuantEndpoint):
             get_logger().warning("broadcast quantization")
             self._after_quant(data=data)
         else:
-            get_logger().warning("stop quantization")
+            get_logger().warning("server not use quantization")
         return super().broadcast(data=data, worker_ids=worker_ids)
 
     def _after_quant(self, data):

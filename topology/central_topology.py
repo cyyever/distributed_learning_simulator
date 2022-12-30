@@ -41,9 +41,9 @@ class ProcessCentralTopology(CentralTopology):
         super().__init__(*args, **kwargs)
         self.__queue = TorchProcessTaskQueue(
             worker_num=0,
-            send_tensor_in_cpu=True,
+            send_tensor_in_cpu=False,
             use_manager=False,
-            assemble_tensor=True,
+            assemble_tensor=False,
         )
         for worker_id in range(self.worker_num):
             self.__queue.add_queue(f"result_{worker_id}")
