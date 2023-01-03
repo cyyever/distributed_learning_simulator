@@ -9,3 +9,11 @@ To run the algorithms of [GTG-Shapley: Efficient and Accurate Participant Contri
 ```
 bash gtg_shapley_train.sh
 ```
+
+## FedOBD
+
+To run the algorithms of [FedOBD: Opportunistic Block Dropout for Efficiently Training Large-scale Neural Networks through Federated Learning](https://arxiv.org/abs/2208.05174), use this command
+
+```
+bash fed_obd_train.sh
+```
