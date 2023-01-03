@@ -5,6 +5,10 @@ psutil
 FileLock-git
 requests
 tqdm
+torch>=1.13
+nvidia-ml-py
+torchtext
+torchvision
 git+ssh://git@github.com/cyyever/torch_toolbox.git@main#egg=cyy_torch_toolbox
 git+ssh://git@github.com/cyyever/torch_algorithm.git@main#egg=cyy_torch_algorithm
 git+ssh://git@github.com/cyyever/naive_python_lib.git@main#egg=cyy_naive_lib
