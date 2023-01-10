@@ -52,12 +52,29 @@ class DistributedTrainingConfig(DefaultConfig):
 global_config: DistributedTrainingConfig = DistributedTrainingConfig()
 
 
-@hydra.main(config_path="conf", version_base=None)
-def load_config(conf) -> None:
-    conf = next(iter(conf.values()))
-    global_conf_path = os.path.join(
-        HydraConfig.get().runtime.cwd, "conf", "global.yaml"
-    )
+def __load_config(conf) -> None:
+    global_conf_path = os.path.join(os.path.dirname(__file__), "conf", "global.yaml")
     result_conf = omegaconf.OmegaConf.load(global_conf_path)
     result_conf.merge_with(conf)
     global_config.load_config_and_process(result_conf)
+
+
+@hydra.main(config_path="conf", version_base=None)
+def load_config(conf) -> None:
+    conf = next(iter(conf.values()))
+    __load_config(conf)
+
+
+def load_config_from_file(
+    dataset_name: str, distributed_algorithm: str
+) -> DistributedTrainingConfig:
+    conf = omegaconf.OmegaConf.load(
+        os.path.join(
+            os.path.dirname(__file__),
+            "conf",
+            distributed_algorithm,
+            dataset_name + ".yaml",
+        )
+    )
+    __load_config(conf)
+    return global_config

@@ -21,9 +21,6 @@ class Practitioner:
 
     def create_trainer(self, config):
         trainer = config.create_trainer()
-        trainer.set_save_dir(
-            os.path.join(trainer.save_dir, f"worker_{self.practitioner_id}")
-        )
         for phase in MachineLearningPhase:
             trainer.dataset_collection.transform_dataset(
                 phase,

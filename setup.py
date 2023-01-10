@@ -1,6 +1,6 @@
 import setuptools
 
-with open("README.md", "r") as fh:
+with open("README.md", "r", encoding="utf8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
@@ -11,7 +11,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/cyyever/distributed_learning_simulator",
-    package_data={"": ["conf/fed_avg/*.yaml", "conf/gtg_sv/*.yaml"]},
+    package_data={"": ["conf/*/*.yaml", "conf/*.yaml"]},
     include_package_data=True,
     package_dir={
         "distributed_learning_simulator": ".",

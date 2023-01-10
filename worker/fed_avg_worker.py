@@ -46,4 +46,9 @@ class FedAVGWorker(Client, AggregationWorker):
         if "end_training" in result:
             self._force_stop = True
             raise StopExecutingException()
+        if "parameter_diff" in result:
+            parameter = {}
+            for k, v in result["parameter_diff"].items():
+                parameter[k] = self._model_cache.cached_parameter_dict[k] + v
+            result["parameter"] = parameter
         self._load_parameters(result["parameter"])

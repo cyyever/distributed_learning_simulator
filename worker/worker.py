@@ -2,7 +2,6 @@ from typing import Any
 
 import gevent.lock
 from cyy_naive_lib.log import get_logger
-from cyy_torch_toolbox.metric_visualizers.metric_logger import MetricLogger
 from cyy_torch_toolbox.ml_type import ModelExecutorHookPoint
 from cyy_torch_toolbox.trainer import Trainer
 from executor import Executor
@@ -24,7 +23,6 @@ class Worker(Executor):
         super().__init__(name=name, **kwargs)
         self.__worker_id = worker_id
         self.__trainer = trainer
-        self.__trainer.visualizer.disable()
         self._round_num = 0
         self._force_stop = False
 
@@ -71,9 +69,10 @@ class Worker(Executor):
                 self._before_training()
                 first_training = False
             if not first_training:
-                self.trainer.disable_logger()
-            MetricLogger.prefix = "round:" + str(self._round_num) + ","
-            self.trainer.visualizer.set_session_name(f"round_{self._round_num}")
+                self.trainer.disable_hook("logger")
+            self.trainer.set_visualizer_prefix(f"round: {self._round_num},")
+            self.trainer.set_save_dir(self.save_dir)
+            self.trainer.disable_hook("tensor_board_visualizer")
             self.trainer.train(
                 **kwargs, batch_loss_log_times=None if self.config.log_batch_loss else 0
             )

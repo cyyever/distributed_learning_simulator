@@ -34,20 +34,21 @@ class FedAVGServer(AggregationServer):
         return self.__stat
 
     def _record_compute_stat(self, parameter_dict) -> None:
+        self.tester.set_visualizer_prefix(f"round_{self._round_number},")
         metric = self.get_metric(parameter_dict)
 
         round_stat = {}
         round_stat["test_loss"] = metric["loss"]
         round_stat["test_acc"] = metric["acc"]
 
-        get_logger().info(
-            "round %s, test accuracy is %s",
-            self.round_number,
-            "{:.2%}".format(round_stat["test_acc"]),
-        )
-        get_logger().info(
-            "round %s, test loss is %s", self.round_number, round_stat["test_loss"]
-        )
+        # get_logger().info(
+        #     "round %s, test accuracy is %s",
+        #     self.round_number,
+        #     "{:.2%}".format(round_stat["test_acc"]),
+        # )
+        # get_logger().info(
+        #     "round %s, test loss is %s", self.round_number, round_stat["test_loss"]
+        # )
         self.__stat[self.round_number] = round_stat
         with open(
             os.path.join(self.save_dir, "round_record.json"), "wt", encoding="utf8"

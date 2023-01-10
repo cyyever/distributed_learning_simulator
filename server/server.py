@@ -28,7 +28,7 @@ class Server(Executor):
             self.__tester.dataset_collection.remove_dataset(
                 phase=MachineLearningPhase.Validation
             )
-            self.__tester.disable_logger()
+            self.__tester.disable_hook("logger")
         return self.__tester
 
     def get_metric(self, parameter_dict: dict) -> dict:
@@ -36,6 +36,7 @@ class Server(Executor):
             parameter_dict = parameter_dict["parameter"]
         self.tester.model_util.load_parameter_dict(parameter_dict)
         self.tester.model_util.disable_running_stats()
+        self.tester.set_save_dir(self.save_dir)
         self.tester.set_device(self._get_device())
         self.tester.inference(epoch=1)
         metric = {
