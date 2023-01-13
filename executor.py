@@ -8,15 +8,39 @@ import torch
 from cyy_torch_toolbox.device import get_device
 
 
-class Executor:
+class ExecutorContext:
+
     semaphore = gevent.lock.BoundedSemaphore(value=1)
+    thread_data = threading.local()
+
+    def __init__(self, name: str):
+        self.__name = name
+
+    def acquire(self) -> None:
+        self.semaphore.acquire()
+        multiprocessing.current_process().name = self.__name
+        threading.current_thread().name = self.__name
+        ExecutorContext.thread_data.ctx = self
+
+    def __enter__(self) -> None:
+        self.acquire()
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.release()
+
+    def release(self):
+        multiprocessing.current_process().name = "unknown executor"
+        threading.current_thread().name = "unknown executor"
+        self.semaphore.release()
+
+
+class Executor:
     __thread_data = threading.local()
 
     def __init__(self, config, endpoint, name, device_lock):
         self.config = copy.deepcopy(config)
         self._endpoint = endpoint
         self.__used_cuda_memory = None
-        self.__hold_semaphore: bool = False
         self._name = name
         self.__device_lock = device_lock
         self.__hold_device_lock = False
@@ -34,19 +58,8 @@ class Executor:
             torch.cuda.set_device(self.__thread_data.device)
         return self.__thread_data.device
 
-    def _acquire_semaphore(self):
-        if not self.__hold_semaphore:
-            self.semaphore.acquire()
-            multiprocessing.current_process().name = self._name
-            threading.current_thread().name = self._name
-            self.__hold_semaphore = True
-
-    def _release_semaphore(self):
-        if self.__hold_semaphore:
-            multiprocessing.current_process().name = "unknown executor"
-            threading.current_thread().name = "unknown executor"
-            self.__hold_semaphore = False
-            self.semaphore.release()
+    def _get_context(self) -> ExecutorContext:
+        return ExecutorContext(name=self._name)
 
     def _release_device_lock(self, **kwargs):
         if self.__hold_device_lock:

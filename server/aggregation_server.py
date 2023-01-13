@@ -43,6 +43,7 @@ class AggregationServer(Server, ModelCache):
 
     def _process_worker_data(self, worker_id, data):
         assert 0 <= worker_id < self.worker_number
+        get_logger().debug("get data %s from worker %s", type(data), worker_id)
         if data is not None:
             data = tensor_to(data, device=get_cpu_device())
             os.makedirs(os.path.join(self.save_dir, "worker_data"), exist_ok=True)

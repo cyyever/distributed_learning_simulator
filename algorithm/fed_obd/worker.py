@@ -41,11 +41,6 @@ class FedOBDWorker(FedAVGWorker, OpportunisticBlockDropoutAlgorithm):
             self._aggregation_time = ModelExecutorHookPoint.AFTER_EPOCH
             self._register_aggregation()
 
-        if "parameter_diff" in result:
-            parameter = {}
-            for k, v in result["parameter_diff"].items():
-                parameter[k] = self._model_cache.cached_parameter_dict[k] + v
-            result["parameter"] = parameter
         super()._load_result_from_server(result=result)
 
     def _should_aggregate(self, **kwargs):
@@ -56,6 +51,9 @@ class FedOBDWorker(FedAVGWorker, OpportunisticBlockDropoutAlgorithm):
             self.__end_training = True
         return True
 
+    def _stopped(self) -> bool:
+        return self.__end_training
+
     def _get_sent_data(self):
         data = super()._get_sent_data()
         if self.__phase == Phase.STAGE_ONE:
@@ -63,7 +61,6 @@ class FedOBDWorker(FedAVGWorker, OpportunisticBlockDropoutAlgorithm):
             return super()._get_sent_data()
 
         self._choose_model_by_validation = False
-        # self._endpoint.quantized_keys = {"quantized_parameter_diff"}
 
         data["round"] = self._round_num
         data["check_acc"] = True

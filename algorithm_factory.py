@@ -82,4 +82,3 @@ def get_worker_config(
             )
         result["worker"] = client_config
         return result
-    return result

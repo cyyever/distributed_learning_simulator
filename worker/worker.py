@@ -1,6 +1,5 @@
 from typing import Any
 
-import gevent.lock
 from cyy_naive_lib.log import get_logger
 from cyy_torch_toolbox.ml_type import ModelExecutorHookPoint
 from cyy_torch_toolbox.trainer import Trainer
@@ -8,8 +7,6 @@ from executor import Executor
 
 
 class Worker(Executor):
-    semaphore = gevent.lock.BoundedSemaphore(value=1)
-
     def __init__(
         self,
         task_id: Any,
@@ -35,12 +32,8 @@ class Worker(Executor):
         return self.__trainer
 
     def _offload_from_memory(self):
-        self.__trainer.offload_from_gpu()
-
-    def _release_semaphore(self) -> None:
         if self.config.offload_memory:
-            self._offload_from_memory()
-        super()._release_semaphore()
+            self.__trainer.offload_from_gpu()
 
     def _before_training(self):
         self._force_stop = False
@@ -60,24 +53,25 @@ class Worker(Executor):
     def start(self, **kwargs):
         first_training: bool = True
         self._round_num = 1
-        while True:
+        while not self._stopped():
             # in case worker changes round number
-            if self._stopped():
-                break
-            self._acquire_semaphore()
-            if first_training:
-                self._before_training()
-                first_training = False
-            if not first_training:
-                self.trainer.disable_hook("logger")
-            self.trainer.set_visualizer_prefix(f"round: {self._round_num},")
-            self.trainer.set_save_dir(self.save_dir)
-            self.trainer.disable_hook("tensor_board_visualizer")
-            self.trainer.train(
-                **kwargs, batch_loss_log_times=None if self.config.log_batch_loss else 0
-            )
-            self._release_semaphore()
-            self._round_num += 1
+            with self._get_context():
+                if first_training:
+                    self._before_training()
+                    first_training = False
+                    # in case worker changes round number
+                    if self._stopped():
+                        break
+                if not first_training:
+                    self.trainer.disable_hook("logger")
+                self.trainer.set_visualizer_prefix(f"round: {self._round_num},")
+                self.trainer.set_save_dir(self.save_dir)
+                self.trainer.train(
+                    **kwargs,
+                    batch_loss_log_times=None if self.config.log_batch_loss else 0,
+                )
+                self._offload_from_memory()
+                self._round_num += 1
         get_logger().debug("close endpoint")
         self._endpoint.close()
         get_logger().debug("finish worker %s", self.worker_id)

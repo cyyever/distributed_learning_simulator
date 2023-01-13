@@ -50,18 +50,18 @@ class Server(Executor):
     def start(self):
         while not self._stopped():
             for worker_id in range(self._endpoint.worker_num):
-                while True:
-                    self._acquire_semaphore()
-                    has_request = self._endpoint.has_data(worker_id)
-                    if not has_request:
-                        self._release_semaphore()
+                while not self._stopped():
+                    has_data = False
+                    with self._get_context():
+                        has_data = self._endpoint.has_data(worker_id)
+                        if has_data:
+                            self._process_worker_data(
+                                worker_id, self._endpoint.get(worker_id=worker_id)
+                            )
+                        else:
+                            get_logger().debug("wait result from worker %s", worker_id)
+                    if not has_data:
                         gevent.sleep(1)
-                        continue
-                    self._process_worker_data(
-                        worker_id, self._endpoint.get(worker_id=worker_id)
-                    )
-                    self._release_semaphore()
-                    break
         get_logger().warning("end server")
 
     def _process_worker_data(self, worker_id, data):

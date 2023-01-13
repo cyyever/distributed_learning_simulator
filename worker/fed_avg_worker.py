@@ -15,8 +15,9 @@ class FedAVGWorker(Client, AggregationWorker):
         self.trainer.dataset_collection.remove_dataset(phase=MachineLearningPhase.Test)
         # load initial parameters
         if self.config.distribute_init_parameters:
-            res = self.__get_result_from_server()
-            assert res
+            self.__get_result_from_server()
+            if self._stopped():
+                return
         self._register_aggregation()
         super()._before_training()
 
@@ -27,8 +28,9 @@ class FedAVGWorker(Client, AggregationWorker):
     def __get_result_from_server(self) -> bool:
         while True:
             result = super()._get_result_from_server()
+            get_logger().debug("get result from server %s", type(result))
             if result is None:
-                get_logger().warning("skip round %s", self._round_num)
+                get_logger().debug("skip round %s", self._round_num)
                 self._round_num += 1
                 self.send_data_to_server(None)
                 if self._stopped():

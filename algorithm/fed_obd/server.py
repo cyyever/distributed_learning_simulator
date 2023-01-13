@@ -1,5 +1,3 @@
-import random
-
 from cyy_naive_lib.log import get_logger
 
 from server.fed_avg_server import FedAVGServer
@@ -14,16 +12,7 @@ class FedOBDServer(FedAVGServer):
     def _select_workers(self) -> set:
         self._endpoint.quant_broadcast = True
         if self.__phase != Phase.STAGE_ONE:
-            return super()._select_workers()
-        self.__random_client_number = self.config.algorithm_kwargs.get(
-            "random_client_number", None
-        )
-        if self.__random_client_number is not None:
-            return set(
-                random.sample(
-                    list(range(self.worker_number)), k=self.__random_client_number
-                )
-            )
+            self.config.algorithm_kwargs.pop("random_client_number", None)
         return super()._select_workers()
 
     def _aggregate_worker_data(self, worker_data):
@@ -49,7 +38,6 @@ class FedOBDServer(FedAVGServer):
                 ):
                     get_logger().warning("switch to phase 2")
                     self.__phase = Phase.STAGE_TWO
-                    # self._endpoint.client_quantized_keys = {"quantized_parameter_diff"}
                     result["phase_two"] = True
                     return result
             case Phase.STAGE_TWO:

@@ -6,7 +6,6 @@ import hydra
 import omegaconf
 from cyy_torch_toolbox.default_config import DefaultConfig
 from cyy_torch_toolbox.device import get_devices
-from hydra.core.hydra_config import HydraConfig
 
 
 class DistributedTrainingConfig(DefaultConfig):
@@ -66,15 +65,17 @@ def load_config(conf) -> None:
 
 
 def load_config_from_file(
-    dataset_name: str, distributed_algorithm: str
+    dataset_name: str | None = None,
+    distributed_algorithm: str | None = None,
+    config_file: None | str = None,
 ) -> DistributedTrainingConfig:
-    conf = omegaconf.OmegaConf.load(
-        os.path.join(
+    if config_file is None:
+        config_file = os.path.join(
             os.path.dirname(__file__),
             "conf",
             distributed_algorithm,
             dataset_name + ".yaml",
         )
-    )
+    conf = omegaconf.OmegaConf.load(config_file)
     __load_config(conf)
     return global_config

@@ -1,4 +1,5 @@
 import gevent
+from executor import ExecutorContext
 
 from .worker import Worker
 
@@ -8,11 +9,15 @@ class Client(Worker):
         self._endpoint.send(data)
 
     def _get_result_from_server(self) -> dict:
-        self._release_semaphore()
+        assert (
+            hasattr(ExecutorContext.thread_data, "ctx")
+            and ExecutorContext.thread_data.ctx is not None
+        )
+        ExecutorContext.thread_data.ctx.release()
         while True:
-            self._acquire_semaphore()
+            ExecutorContext.thread_data.ctx.acquire()
             if self._endpoint.has_data():
                 break
-            self._release_semaphore()
+            ExecutorContext.thread_data.ctx.release()
             gevent.sleep(1)
         return self._endpoint.get()

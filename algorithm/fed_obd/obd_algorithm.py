@@ -136,7 +136,7 @@ class OpportunisticBlockDropoutAlgorithm:
                     continue
                 partial_parameter_num += block_size
                 new_parameter_dict |= block_dict
-        get_logger().debug("choose blocks %s", new_parameter_dict.keys())
+        get_logger().info("choose blocks %s", new_parameter_dict.keys())
         get_logger().info(
             "partial_parameter_num %s threshold %s", partial_parameter_num, threshold
         )
