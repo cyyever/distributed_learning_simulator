@@ -3,6 +3,7 @@ import multiprocessing
 import os
 import threading
 
+import gevent.local
 import gevent.lock
 import torch
 from cyy_torch_toolbox.device import get_device
@@ -11,7 +12,7 @@ from cyy_torch_toolbox.device import get_device
 class ExecutorContext:
 
     semaphore = gevent.lock.BoundedSemaphore(value=1)
-    thread_data = threading.local()
+    local_data = gevent.local.local()
 
     def __init__(self, name: str):
         self.__name = name
@@ -20,7 +21,7 @@ class ExecutorContext:
         self.semaphore.acquire()
         multiprocessing.current_process().name = self.__name
         threading.current_thread().name = self.__name
-        ExecutorContext.thread_data.ctx = self
+        ExecutorContext.local_data.ctx = self
 
     def __enter__(self) -> None:
         self.acquire()

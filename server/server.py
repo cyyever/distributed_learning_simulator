@@ -62,6 +62,8 @@ class Server(Executor):
                             get_logger().debug("wait result from worker %s", worker_id)
                     if not has_data:
                         gevent.sleep(1)
+                    else:
+                        break
         get_logger().warning("end server")
 
     def _process_worker_data(self, worker_id, data):
