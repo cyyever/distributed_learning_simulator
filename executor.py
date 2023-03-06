@@ -10,7 +10,6 @@ from cyy_torch_toolbox.device import get_device
 
 
 class ExecutorContext:
-
     semaphore = gevent.lock.BoundedSemaphore(value=1)
     local_data = gevent.local.local()
 
@@ -48,15 +47,18 @@ class Executor:
 
     def _get_device(self, lock_callback=None):
         if not hasattr(self.__thread_data, "device"):
-            if not self.__hold_device_lock:
-                self.__device_lock.acquire()
-                self.__hold_device_lock = True
-                if lock_callback is not None:
-                    lock_callback()
-            self.__thread_data.device = get_device(
-                use_cuda_only=True, max_needed_bytes=self.__used_cuda_memory
-            )
-            torch.cuda.set_device(self.__thread_data.device)
+            if torch.cuda.is_available():
+                if not self.__hold_device_lock:
+                    self.__device_lock.acquire()
+                    self.__hold_device_lock = True
+                    if lock_callback is not None:
+                        lock_callback()
+                self.__thread_data.device = get_device(
+                    use_cuda_only=True, max_needed_bytes=self.__used_cuda_memory
+                )
+                torch.cuda.set_device(self.__thread_data.device)
+            else:
+                self.__thread_data.device = get_device()
         return self.__thread_data.device
 
     def _get_context(self) -> ExecutorContext:

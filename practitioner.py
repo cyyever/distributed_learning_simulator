@@ -2,7 +2,7 @@ import os
 import pickle
 import sqlite3
 
-from cyy_torch_toolbox.dataset import sub_dataset
+from cyy_torch_toolbox.dataset import subset_dp
 from cyy_torch_toolbox.dataset_collection import DatasetCollectionConfig
 from cyy_torch_toolbox.ml_type import MachineLearningPhase
 
@@ -10,22 +10,22 @@ from cyy_torch_toolbox.ml_type import MachineLearningPhase
 class Practitioner:
     def __init__(self, practitioner_id: int):
         self.practitioner_id = practitioner_id
-        self._datasets: dict = {}
-
-    @property
-    def datasets(self):
-        return self._datasets
+        self._dataset_indices: dict = {}
 
     def add_dataset_collection(self, name: str, indices: dict) -> None:
-        self._datasets[name] = indices
+        self._dataset_indices[name] = indices
+
+    def has_dataset(self, name: str) -> bool:
+        return name in self._dataset_indices
 
     def create_trainer(self, config):
         trainer = config.create_trainer()
         for phase in MachineLearningPhase:
             trainer.dataset_collection.transform_dataset(
                 phase,
-                lambda dataset, _, __: sub_dataset(
-                    dataset, self.datasets[trainer.dataset_collection.name][phase]
+                lambda dataset, _, __: subset_dp(
+                    dataset,
+                    self._dataset_indices[trainer.dataset_collection.name][phase],
                 ),
             )
         return trainer
@@ -68,7 +68,7 @@ class PersistentPractitioner(Practitioner):
             super().__init__(practitioner_id=self.create_practitioner())
         else:
             super().__init__(practitioner_id=practitioner_id)
-            self._datasets = self.__get_datasets()
+            self._dataset_indices = self.__get_datasets()
 
     def iid_sample_dataset(self, name: str, percentage: float) -> None:
         config = DatasetCollectionConfig(dataset_name=name)
@@ -109,7 +109,7 @@ class PersistentPractitioner(Practitioner):
         return pickle.loads(dataset_blob)
 
     def __store_datasets(self) -> None:
-        dataset_blob = pickle.dumps(self.datasets)
+        dataset_blob = pickle.dumps(self._dataset_indices)
         with self.connect_db() as conn:
             cur = conn.cursor()
             cur.execute(

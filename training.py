@@ -1,13 +1,15 @@
 import multiprocessing
 import os
-
-os.environ["CUDA_MODULE_LOADING"] = "LAZY"
 import sys
-import threading
 import uuid
 
 import gevent
+
+os.environ["CUDA_MODULE_LOADING"] = "LAZY"
+from cyy_naive_lib.data_structure.process_initialization import \
+    get_process_data
 from cyy_naive_lib.log import get_logger, set_file_handler
+from cyy_naive_lib.system_info import get_operating_system
 from cyy_torch_toolbox.data_structure.torch_process_pool import \
     TorchProcessPool
 
@@ -15,22 +17,15 @@ sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 from algorithm_factory import get_worker_config
 from config import DistributedTrainingConfig
 
-local_data = threading.local()
-
-
-def process_initializer(device_lock, topology):
-    global local_data
-    local_data.device_lock = device_lock
-    local_data.topology = topology
-
 
 def start_executors(
-    task_id: int | None, worker_configs: list[dict], server_config: None | dict = None
+    task_id: int | None,
+    worker_configs: list[dict],
+    server_config: None | dict = None,
 ) -> dict:
-    global local_data
-    device_lock = local_data.device_lock
-    topology = local_data.topology
 
+    device_lock = get_process_data()["device_lock"]
+    topology = get_process_data()["topology"]
     workers: list = []
 
     for worker_config in worker_configs:
@@ -103,8 +98,9 @@ def train(
     task_id: int | None = uuid.uuid4().int
     if not non_blocking:
         task_id = None
-    process_pool = TorchProcessPool(
-        initializer=process_initializer, initargs=(device_lock, topology)
+    process_pool: TorchProcessPool = TorchProcessPool(
+        method="spawn" if get_operating_system() != "freebsd" else "fork",
+        initargs=[{"fun_kwargs": {"device_lock": device_lock, "topology": topology}}],
     )
     for process_idx, worker_configs in worker_config["worker"].items():
         server_config = None
@@ -117,7 +113,7 @@ def train(
             server_config=server_config,
         )
     if not non_blocking:
-        process_pool.stop()
+        process_pool.shutdown()
         return None
     tasks[task_id] = {
         "process_pool": process_pool,
@@ -127,13 +123,14 @@ def train(
     return task_id
 
 
-def get_training_result(task_id: int, timeout=None) -> None | dict:
+def get_training_result(task_id: int, timeout: None | float = None) -> None | dict:
     task = tasks[task_id]
     process_pool = task["process_pool"]
     if not process_pool.wait(timeout=timeout):
         return None
     tasks.pop(task_id)
-    results = process_pool.stop()
+    results = process_pool.wait_results()
+    process_pool.shutdown()
     tmp_stats: dict = {}
     for result in results:
         tmp_stats |= result

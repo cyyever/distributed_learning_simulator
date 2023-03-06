@@ -41,7 +41,7 @@ def get_worker_config(
     else:
         for practitioner_id in sorted(practitioner_ids):
             practitioner = PersistentPractitioner(practitioner_id=practitioner_id)
-            assert config.dc_config.dataset_name in practitioner.datasets
+            assert practitioner.has_dataset(config.dc_config.dataset_name)
             practitioners.append(practitioner)
         config.worker_number = len(practitioners)
 

@@ -34,7 +34,7 @@ class FedAVGServer(AggregationServer):
         return self.__stat
 
     def _record_compute_stat(self, parameter_dict) -> None:
-        self.tester.set_visualizer_prefix(f"round_{self._round_number},")
+        self.tester.set_visualizer_prefix(f"round: {self._round_number},")
         metric = self.get_metric(parameter_dict)
 
         round_stat = {}
