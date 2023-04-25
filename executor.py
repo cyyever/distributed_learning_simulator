@@ -78,6 +78,7 @@ class Executor:
 
     @property
     def save_dir(self):
-        save_dir = os.path.join(self.config.save_dir, self._name.replace(" ", "_"))
-        os.makedirs(save_dir, exist_ok=True)
+        save_dir = os.path.abspath(
+            os.path.join(self.config.save_dir, self._name.replace(" ", "_"))
+        )
         return save_dir

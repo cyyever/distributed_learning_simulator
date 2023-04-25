@@ -2,7 +2,7 @@ import json
 import os
 
 import torch
-from cyy_torch_toolbox.ml_type import ModelExecutorHookPoint
+from cyy_torch_toolbox.ml_type import ExecutorHookPoint
 from cyy_torch_toolbox.tensor import (cat_tensors_to_vector,
                                       decompose_tensor_to_list)
 from torch.optim.sgd import SGD
@@ -32,13 +32,13 @@ class GradientWorker(Client):
         assert isinstance(self.trainer.get_optimizer(), SGD)
         self.__epoch_stat = {}
         self.trainer.append_named_hook(
-            ModelExecutorHookPoint.OPTIMIZER_STEP, "step", self.__step
+            ExecutorHookPoint.OPTIMIZER_STEP, "step", self.__step
         )
         self.trainer.append_named_hook(
-            ModelExecutorHookPoint.AFTER_EPOCH, "record", self.__record
+            ExecutorHookPoint.AFTER_EPOCH, "record", self.__record
         )
         self.trainer.append_named_hook(
-            ModelExecutorHookPoint.AFTER_EXECUTE, "report_end", self.__report_end
+            ExecutorHookPoint.AFTER_EXECUTE, "report_end", self.__report_end
         )
 
     def __report_end(self, **kwargs):
@@ -47,8 +47,8 @@ class GradientWorker(Client):
     def _process_gradient(self, gradient):
         return gradient
 
-    def __step(self, model_executor):
-        trainer = model_executor
+    def __step(self, executor):
+        trainer = executor
         optimizer = trainer.get_optimizer()
         if hasattr(optimizer, "_step_count"):
             optimizer._step_count += 1
@@ -115,7 +115,7 @@ class GradientWorker(Client):
 
     def __record(self, **kwargs):
         epoch = kwargs["epoch"]
-        trainer = kwargs["model_executor"]
+        trainer = kwargs["executor"]
         self.__epoch_stat[epoch] = {}
         self.__epoch_stat[epoch]["loss"] = trainer.performance_metric.get_loss(
             epoch

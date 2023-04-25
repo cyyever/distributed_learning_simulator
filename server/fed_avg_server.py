@@ -21,19 +21,19 @@ class FedAVGServer(AggregationServer):
         if self._early_stop:
             get_logger().warning("stop early")
 
-    def _aggregate_worker_data(self, worker_data):
-        parameter_dict = super()._aggregate_worker_data(worker_data=worker_data)
-        if self._compute_stat or self._early_stop:
-            self._record_compute_stat(parameter_dict)
-        if self._early_stop and self._convergent():
-            return {"end_training": True}
-        return {"parameter": parameter_dict}
+    def _after_aggregate_worker_data(self, result):
+        if "parameter" in result:
+            if self._compute_stat or self._early_stop:
+                self._record_compute_stat(result["parameter"])
+            if self._early_stop and self._convergent():
+                result["end_training"] = True
+        super()._after_aggregate_worker_data(result=result)
 
     @property
     def performance_stat(self) -> dict:
         return self.__stat
 
-    def _record_compute_stat(self, parameter_dict) -> None:
+    def _record_compute_stat(self, parameter_dict: dict) -> None:
         self.tester.set_visualizer_prefix(f"round: {self._round_number},")
         metric = self.get_metric(parameter_dict)
 
@@ -41,14 +41,6 @@ class FedAVGServer(AggregationServer):
         round_stat["test_loss"] = metric["loss"]
         round_stat["test_acc"] = metric["acc"]
 
-        # get_logger().info(
-        #     "round %s, test accuracy is %s",
-        #     self.round_number,
-        #     "{:.2%}".format(round_stat["test_acc"]),
-        # )
-        # get_logger().info(
-        #     "round %s, test loss is %s", self.round_number, round_stat["test_loss"]
-        # )
         self.__stat[self.round_number] = round_stat
         with open(
             os.path.join(self.save_dir, "round_record.json"), "wt", encoding="utf8"

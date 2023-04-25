@@ -11,9 +11,6 @@ class CentralTopology(Topology):
     def get_from_server(self, worker_id):
         raise NotImplementedError()
 
-    def set_server_function(self, fun):
-        raise NotImplementedError()
-
     def get_from_worker(self, worker_id):
         raise NotImplementedError()
 
@@ -56,9 +53,6 @@ class ProcessCentralTopology(CentralTopology):
     def get_from_server(self, worker_id):
         assert 0 <= worker_id < self.worker_num
         return self.__queue.get_data(queue_name=f"result_{worker_id}")
-
-    def set_server_function(self, fun):
-        self.__queue.set_worker_fun(fun)
 
     def server_has_data(self, worker_id: int) -> bool:
         assert 0 <= worker_id < self.worker_num

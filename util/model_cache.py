@@ -9,15 +9,21 @@ ParameterDictType: TypeAlias = dict[str, torch.Tensor]
 
 
 class ModelCache:
-    def __init__(self):
+    def __init__(self) -> None:
         self.__parameter_dict: DataStorage = DataStorage()
 
     @property
-    def cached_parameter_dict(self) -> ParameterDictType:
+    def get_parameter_dict(self) -> ParameterDictType:
         return self.__parameter_dict.data
 
-    def cache_parameter_dict(self, parameter_dict: ParameterDictType) -> None:
+    def load_file(self, path: str) -> None:
+        self.__parameter_dict = DataStorage(data_path=path)
+
+    def cache_parameter_dict(
+        self, parameter_dict: ParameterDictType, path: str
+    ) -> None:
         self.__parameter_dict.set_data(tensor_to(parameter_dict, device="cpu"))
+        self.__parameter_dict.set_data_path(path)
 
     def discard(self):
         self.__parameter_dict.set_data(None)
@@ -26,17 +32,20 @@ class ModelCache:
         self, new_parameter_dict: ParameterDictType
     ) -> ParameterDictType:
         return {
-            k: tensor_to(v, device="cpu") - self.cached_parameter_dict[k]
+            k: tensor_to(v, device="cpu") - self.get_parameter_dict[k]
             for k, v in new_parameter_dict.items()
         }
 
-    def add_parameter_diff(self, parameter_diff: ParameterDictType) -> None:
-        for k, v in self.cached_parameter_dict.items():
-            self.cached_parameter_dict[k] = v + tensor_to(
-                parameter_diff[k], device="cpu"
-            )
+    def add_parameter_diff(self, parameter_diff: ParameterDictType, path: str) -> None:
+        self.__parameter_dict.save()
+        self.__parameter_dict.set_data_path(path)
+        for k, v in self.get_parameter_dict.items():
+            self.get_parameter_dict[k] = v + tensor_to(parameter_diff[k], device="cpu")
         self.__parameter_dict.mark_new_data()
 
-    def save(self, save_dir: str) -> None:
-        self.__parameter_dict.set_data_path(os.path.join(save_dir, "cached_model.pk"))
+    def save(self) -> None:
         self.__parameter_dict.save()
+
+    def get_parameter_path(self) -> str:
+        self.__parameter_dict.save()
+        return self.__parameter_dict.data_path

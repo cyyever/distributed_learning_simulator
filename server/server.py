@@ -1,23 +1,24 @@
+import copy
 import random
 
 import gevent
 import gevent.lock
 from cyy_naive_lib.log import get_logger
+from cyy_torch_toolbox.executor import Executor as CentralizedExecutor
 from cyy_torch_toolbox.ml_type import MachineLearningPhase
-from cyy_torch_toolbox.model_executor import ModelExecutor
 from executor import Executor
 
 
 class Server(Executor):
-    def __init__(self, task_id, **kwargs):
-        name = "server"
+    def __init__(self, task_id: int, **kwargs: dict) -> None:
+        name: str = "server"
         if task_id is not None:
             name = f"server of {task_id}"
         super().__init__(**kwargs, name=name)
-        self.__tester: None | ModelExecutor = None
+        self.__tester: None | CentralizedExecutor = None
 
     @property
-    def tester(self) -> ModelExecutor:
+    def tester(self) -> CentralizedExecutor:
         if self.__tester is None:
             self.__tester = self.config.create_inferencer(
                 phase=MachineLearningPhase.Test
@@ -48,23 +49,25 @@ class Server(Executor):
         return metric
 
     def start(self):
+        worker_set = set()
         while not self._stopped():
-            for worker_id in range(self._endpoint.worker_num):
-                while not self._stopped():
-                    has_data = False
-                    with self._get_context():
-                        has_data = self._endpoint.has_data(worker_id)
-                        if has_data:
-                            self._process_worker_data(
-                                worker_id, self._endpoint.get(worker_id=worker_id)
-                            )
-                        else:
-                            get_logger().debug("wait result from worker %s", worker_id)
-                    if not has_data:
-                        gevent.sleep(1)
-                    else:
-                        break
-        get_logger().warning("end server")
+            if not worker_set:
+                worker_set = set(range(self._endpoint.worker_num))
+            with self._get_context():
+                for worker_id in copy.copy(worker_set):
+                    has_data: bool = self._endpoint.has_data(worker_id)
+                    if has_data:
+                        self._process_worker_data(
+                            worker_id, self._endpoint.get(worker_id=worker_id)
+                        )
+                        get_logger().debug("get result from %s", worker_id)
+                        worker_set.remove(worker_id)
+            if worker_set and not self._stopped():
+                get_logger().debug("wait result")
+                gevent.sleep(1)
+
+        with self._get_context():
+            get_logger().warning("end server")
 
     def _process_worker_data(self, worker_id, data):
         raise NotImplementedError()
@@ -73,11 +76,16 @@ class Server(Executor):
     def worker_number(self):
         return self.config.worker_number
 
-    def send_result(self, data):
+    def send_result(self, result):
+        if "worker_result" in result:
+            for worker_id, data in result["worker_result"].items():
+                self._endpoint.send(data, worker_id)
+            return
+
         selected_workers = self._select_workers()
         get_logger().debug("choose workers %s", selected_workers)
         if selected_workers:
-            self._endpoint.broadcast(data=data, worker_ids=selected_workers)
+            self._endpoint.broadcast(data=result, worker_ids=selected_workers)
         unselected_workers = set(range(self.worker_number)) - selected_workers
         if unselected_workers:
             self._endpoint.broadcast(data=None, worker_ids=unselected_workers)

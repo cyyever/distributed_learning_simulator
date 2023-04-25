@@ -5,11 +5,12 @@ import uuid
 
 import gevent
 
+# we use these env variables to save memory in large-scale training
 os.environ["CUDA_MODULE_LOADING"] = "LAZY"
+os.environ["USE_THREAD_DATALOADER"] =  "1"
 from cyy_naive_lib.data_structure.process_initialization import \
     get_process_data
 from cyy_naive_lib.log import get_logger, set_file_handler
-from cyy_naive_lib.system_info import get_operating_system
 from cyy_torch_toolbox.data_structure.torch_process_pool import \
     TorchProcessPool
 
@@ -29,15 +30,11 @@ def start_executors(
     workers: list = []
 
     for worker_config in worker_configs:
-        practitioner = worker_config.pop("practitioner")
-        config = worker_config.pop("config")
-        trainer = practitioner.create_trainer(config=config)
         workers.append(
             worker_config["constructor"](
                 extra_kwargs={
                     "task_id": task_id,
                     "device_lock": device_lock,
-                    "trainer": trainer,
                 },
                 extra_endpoint_kwargs={
                     "topology": topology,
@@ -70,7 +67,7 @@ def start_executors(
             server = worker
             if hasattr(server, "sv_algorithm"):
                 res["sv"] = server.sv_algorithm.shapley_values
-            res |= server.performance_stat[server.round_number]
+            res |= server.performance_stat[server.round_number - 1]
             continue
     return res
 
@@ -99,13 +96,17 @@ def train(
     if not non_blocking:
         task_id = None
     process_pool: TorchProcessPool = TorchProcessPool(
-        method="spawn" if get_operating_system() != "freebsd" else "fork",
         initargs=[{"fun_kwargs": {"device_lock": device_lock, "topology": topology}}],
+    )
+    server_config = worker_config.get("server", None)
+    process_pool.exec(
+        start_executors,
+        task_id=task_id,
+        worker_configs=[],
+        server_config=server_config,
     )
     for process_idx, worker_configs in worker_config["worker"].items():
         server_config = None
-        if process_idx == 0:
-            server_config = worker_config.get("server", None)
         process_pool.exec(
             start_executors,
             task_id=task_id,
@@ -126,13 +127,13 @@ def train(
 def get_training_result(task_id: int, timeout: None | float = None) -> None | dict:
     task = tasks[task_id]
     process_pool = task["process_pool"]
-    if not process_pool.wait(timeout=timeout):
+    results, not_done = process_pool.wait_results(timeout=timeout)
+    if not_done:
         return None
     tasks.pop(task_id)
-    results = process_pool.wait_results()
     process_pool.shutdown()
     tmp_stats: dict = {}
-    for result in results:
+    for result in results.values():
         tmp_stats |= result
     stats: dict = {}
     practitioner_ids = task["practitioner_ids"]

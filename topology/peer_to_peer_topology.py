@@ -29,7 +29,7 @@ class ProcessPeerToPeerTopology(PeerToPeerTopology):
         self.__queues: dict = {}
         for worker_id in range(self.worker_num):
             self.__queues[worker_id] = TorchProcessTaskQueue(
-                worker_num=0, use_manager=True, move_data_in_cpu=True
+                worker_num=0, use_manager=True
             )
             for peer_id in range(self.worker_num):
                 self.__queues[worker_id].add_result_queue(f"result_{peer_id}")

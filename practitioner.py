@@ -2,7 +2,6 @@ import os
 import pickle
 import sqlite3
 
-from cyy_torch_toolbox.dataset import subset_dp
 from cyy_torch_toolbox.dataset_collection import DatasetCollectionConfig
 from cyy_torch_toolbox.ml_type import MachineLearningPhase
 
@@ -21,12 +20,9 @@ class Practitioner:
     def create_trainer(self, config):
         trainer = config.create_trainer()
         for phase in MachineLearningPhase:
-            trainer.dataset_collection.transform_dataset(
-                phase,
-                lambda dataset, _, __: subset_dp(
-                    dataset,
-                    self._dataset_indices[trainer.dataset_collection.name][phase],
-                ),
+            trainer.dataset_collection.set_subset(
+                phase=phase,
+                indices=self._dataset_indices[trainer.dataset_collection.name][phase],
             )
         return trainer
 

@@ -24,23 +24,3 @@ def load_parameters(
     trainer.model_util.disable_running_stats()
 
 
-def get_module_blocks(
-    model_util: ModelUtil,
-    block_types: set = None,
-) -> list:
-    if block_types is None:
-        block_types = {
-            ("AlbertTransformer",),
-            ("AlbertEmbeddings",),
-            ("Bottleneck",),
-            ("TransformerEncoderLayer",),
-            (nn.Conv2d, nn.BatchNorm2d, nn.ReLU, nn.MaxPool2d),
-            (nn.Conv2d, nn.BatchNorm2d, nn.ReLU),
-            (nn.Conv2d, nn.ReLU, nn.MaxPool2d),
-            (nn.BatchNorm2d, nn.ReLU, nn.Conv2d),
-            (nn.BatchNorm2d, nn.Conv2d),
-            (nn.Conv2d, nn.BatchNorm2d),
-            (nn.Conv2d, nn.ReLU),
-            (nn.Linear, nn.ReLU),
-        }
-    return model_util.get_module_blocks(block_types=block_types)

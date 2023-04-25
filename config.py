@@ -18,6 +18,7 @@ class DistributedTrainingConfig(DefaultConfig):
         self.iid: bool = True
         self.log_batch_loss: bool = False
         self.distribute_init_parameters: bool = True
+        self.server_send_file: bool = False
         self.log_file: None | str = None
         self.offload_memory: bool = False
         self.endpoint_kwargs: dict = {}
@@ -29,11 +30,14 @@ class DistributedTrainingConfig(DefaultConfig):
         task_time = datetime.datetime.now()
         date_time = "{date:%Y-%m-%d_%H_%M_%S}".format(date=task_time)
         log_suffix = self.algorithm_kwargs.get("log_suffix", "")
+        dataset_name = self.dc_config.dataset_kwargs.get(
+            "name", self.dc_config.dataset_name
+        )
         dir_suffix = os.path.join(
             self.distributed_algorithm + log_suffix
             if self.iid
             else self.distributed_algorithm + "_non_iid" + log_suffix,
-            self.dc_config.dataset_name,
+            dataset_name,
             self.model_config.model_name,
             date_time,
             str(uuid.uuid4()),
@@ -60,7 +64,8 @@ def __load_config(conf) -> None:
 
 @hydra.main(config_path="conf", version_base=None)
 def load_config(conf) -> None:
-    conf = next(iter(conf.values()))
+    while "dataset_name" not in conf and len(conf) == 1:
+        conf = next(iter(conf.values()))
     __load_config(conf)
 
 

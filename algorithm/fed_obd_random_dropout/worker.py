@@ -1,7 +1,7 @@
 from algorithm.fed_obd.phase import Phase
 from algorithm.random_dropout_algorithm import RandomDropoutAlgorithm
 from cyy_naive_lib.log import get_logger
-from cyy_torch_toolbox.ml_type import ModelExecutorHookPoint
+from cyy_torch_toolbox.ml_type import ExecutorHookPoint
 
 from worker.fed_avg_worker import FedAVGWorker
 
@@ -35,17 +35,17 @@ class FedOBDRandomDropoutWorker(FedAVGWorker, RandomDropoutAlgorithm):
                 "change lr to %s",
                 self.trainer.hyper_parameter.get_learning_rate(self.trainer),
             )
-            self._aggregation_time = ModelExecutorHookPoint.AFTER_EPOCH
+            self._aggregation_time = ExecutorHookPoint.AFTER_EPOCH
             self._register_aggregation()
         # distributed first time from server
-        if self._model_cache.cached_parameter_dict is None:
+        if self._model_cache.get_parameter_dict is None:
             super()._load_result_from_server(result=result)
             return
 
         if "parameter_diff" in result:
             parameter = {}
             for k, v in result["parameter_diff"].items():
-                parameter[k] = self._model_cache.cached_parameter_dict[k] + v
+                parameter[k] = self._model_cache.get_parameter_dict[k] + v
             result["parameter"] = parameter
         super()._load_result_from_server(result=result)
 
@@ -65,7 +65,7 @@ class FedOBDRandomDropoutWorker(FedAVGWorker, RandomDropoutAlgorithm):
 
         self._choose_model_by_validation = False
 
-        data["round"] = self._round_num
+        data["in_round_data"] = True
         data["check_acc"] = True
         if self.__end_training:
             data["final_aggregation"] = True

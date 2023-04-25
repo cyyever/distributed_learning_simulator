@@ -1,24 +1,25 @@
+from algorithm.fed_obd.phase import Phase
 from cyy_naive_lib.log import get_logger
 from cyy_torch_toolbox.ml_type import ExecutorHookPoint
 
 from worker.fed_avg_worker import FedAVGWorker
 
-from .obd_algorithm import OpportunisticBlockDropoutAlgorithm
-from .phase import Phase
+from .obd_layer_algorithm import OpportunisticLayerDropoutAlgorithm
 
 
-class FedOBDWorker(FedAVGWorker, OpportunisticBlockDropoutAlgorithm):
+class FedOBDLayerWorker(FedAVGWorker, OpportunisticLayerDropoutAlgorithm):
     __phase = Phase.STAGE_ONE
     __end_training = False
 
     def __init__(self, *args, **kwargs):
         FedAVGWorker.__init__(self, *args, **kwargs)
-        OpportunisticBlockDropoutAlgorithm.__init__(
-            self, dropout_rate=self.config.algorithm_kwargs["dropout_rate"]
+        OpportunisticLayerDropoutAlgorithm.__init__(
+            self,
+            dropout_rate=self.config.algorithm_kwargs["dropout_rate"],
         )
         self._endpoint.dequant_server_data = True
-        self._keep_optimizer = True
         self._send_parameter_diff = False
+        self._find_blocks()
 
     def _load_result_from_server(self, result):
         if "phase_two" in result:
@@ -26,8 +27,7 @@ class FedOBDWorker(FedAVGWorker, OpportunisticBlockDropoutAlgorithm):
             self.__phase = Phase.STAGE_TWO
             get_logger().warning("switch to phase 2")
             self._reuse_learning_rate = True
-            self._send_parameter_diff = True
-            self._choose_model_by_validation = False
+            self.trainer.remove_optimizer()
             self.trainer.hyper_parameter.set_epoch(
                 self.config.algorithm_kwargs["second_phase_epoch"]
             )
@@ -58,19 +58,13 @@ class FedOBDWorker(FedAVGWorker, OpportunisticBlockDropoutAlgorithm):
     def _get_sent_data(self):
         data = super()._get_sent_data()
         if self.__phase == Phase.STAGE_ONE:
-            block_parameter = self.get_block_parameter(
-                parameter_dict=data.pop("parameter"),
-                model_util=self.trainer.model_util,
-                model_cache=self._model_cache,
-            )
-            data["parameter_diff"] = self._model_cache.get_parameter_diff(
-                block_parameter
-            )
-            return data
+            data["parameter"] = self.get_block_parameter(data["parameter"])
+            return super()._get_sent_data()
+
+        self._choose_model_by_validation = False
 
         data["in_round_data"] = True
         data["check_acc"] = True
         if self.__end_training:
             data["final_aggregation"] = True
-        get_logger().warning("phase 2 keys %s", data.keys())
         return data

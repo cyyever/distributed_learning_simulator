@@ -11,9 +11,6 @@ class ServerEndpoint(Endpoint):
     def worker_num(self):
         return self._topology.worker_num
 
-    def set_function(self, fun):
-        self._topology.set_server_function(fun)
-
     def has_data(self, worker_id: int) -> bool:
         return self._topology.worker_has_data(worker_id=worker_id)
 

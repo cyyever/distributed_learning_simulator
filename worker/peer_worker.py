@@ -18,6 +18,6 @@ class PeerWorker(Worker):
                     res[worker_id] = self._endpoint.get(peer_id=worker_id)
                     break
                 self._release_semaphore()
-                gevent.sleep(1)
+                gevent.sleep(0.1)
                 self._acquire_semaphore()
         return res

@@ -7,16 +7,10 @@ from cyy_torch_algorithm.quantization.stochastic import stochastic_quantization
 from .cs_endpoint import ClientEndpoint, ServerEndpoint
 
 
-class QuantEndpoint:
-    def __init__(self, quant, dequant):
-        self._quant, self._dequant = quant, dequant
-
-
-class QuantClientEndpoint(ClientEndpoint, QuantEndpoint):
+class QuantClientEndpoint(ClientEndpoint):
     def __init__(self, quant, dequant, **kwargs):
-        ClientEndpoint.__init__(self, **kwargs)
-        QuantEndpoint.__init__(self, quant=quant, dequant=dequant)
-        self.use_quantization: bool = True
+        super().__init__(**kwargs)
+        self._quant, self._dequant = quant, dequant
         self.quantized_keys: set = set(["parameter", "parameter_diff"])
         self.dequant_server_data: bool = False
 
@@ -30,7 +24,8 @@ class QuantClientEndpoint(ClientEndpoint, QuantEndpoint):
         if data is None:
             super().send(data=data)
             return
-        if self.use_quantization:
+        if self.quantized_keys:
+            get_logger().debug("before client quantization")
             has_quantized = False
             assert self.quantized_keys
             for k in self.quantized_keys:
@@ -39,6 +34,7 @@ class QuantClientEndpoint(ClientEndpoint, QuantEndpoint):
                     has_quantized = True
             assert has_quantized
             self._after_quant(data=data)
+            get_logger().debug("after client quantization")
         else:
             get_logger().warning("client not use quantization")
         super().send(data=data)
@@ -47,12 +43,13 @@ class QuantClientEndpoint(ClientEndpoint, QuantEndpoint):
         pass
 
 
-class QuantServerEndpoint(ServerEndpoint, QuantEndpoint):
+class QuantServerEndpoint(ServerEndpoint):
     def __init__(self, quant, dequant, **kwargs):
-        ServerEndpoint.__init__(self, **kwargs)
-        QuantEndpoint.__init__(self, quant=quant, dequant=dequant)
+        super().__init__(**kwargs)
+        self._quant, self._dequant = quant, dequant
         self.quant_broadcast: bool = False
         self.client_quantized_keys: set = set(["parameter", "parameter_diff"])
+        self.quantized_keys: set = set(["parameter", "parameter_diff"])
 
     def get(self, worker_id):
         data = super().get(worker_id=worker_id)
@@ -63,14 +60,20 @@ class QuantServerEndpoint(ServerEndpoint, QuantEndpoint):
                 data[k] = self._dequant(data[k])
         return data
 
-    def broadcast(self, data, worker_ids=None):
-        if self.quant_broadcast:
-            data = self._quant(data)
-            get_logger().warning("broadcast quantization")
-            self._after_quant(data=data)
-        else:
-            get_logger().warning("server not use quantization")
-        return super().broadcast(data=data, worker_ids=worker_ids)
+    def broadcast(self, data, **kwargs):
+        if data is not None:
+            if self.quant_broadcast:
+                has_quantized = False
+                for k in data:
+                    if k in self.quantized_keys:
+                        data[k] = self._quant(data[k])
+                        has_quantized = True
+                assert has_quantized
+                get_logger().warning("broadcast quantization")
+                self._after_quant(data=data)
+            else:
+                get_logger().warning("server not use quantization")
+        return super().broadcast(data=data, **kwargs)
 
     def _after_quant(self, data):
         pass
@@ -108,8 +111,14 @@ class NNADQServerEndpoint(QuantServerEndpoint):
         else:
             quant, dequant = NNADQ(weight=weight)
         super().__init__(quant=quant, dequant=dequant, **kwargs)
+        self.__quant_callback = None
+
+    def set_quant_callback(self, quant_callback):
+        self.__quant_callback = quant_callback
 
     def _after_quant(self, data):
         NeuralNetworkAdaptiveDeterministicQuant.check_compression_ratio(
             data, prefix="broadcast"
         )
+        if self.__quant_callback is not None:
+            self.__quant_callback(data=data)
