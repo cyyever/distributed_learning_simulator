@@ -1,6 +1,6 @@
 ---
-cache_transforms: true
+cache_transforms: cpu
 log_level: INFO
-parallel_number: 8
 log_batch_loss: false
+save_performance_metric: false
 use_amp: true

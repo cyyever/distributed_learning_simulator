@@ -51,13 +51,13 @@ class GraphWorker(FedAVGWorker):
 
     @functools.cached_property
     def training_mask(self) -> torch.Tensor:
-        return self.trainer.dataset[0].mask
+        return self.trainer.dataset[0]["subset_mask"]
 
     @functools.cached_property
     def validation_mask(self) -> torch.Tensor:
         return self.trainer.dataset_collection.get_dataset(
             phase=MachineLearningPhase.Validation
-        )[0].mask
+        )[0]["subset_mask"]
 
     def __in_training(self, module_args) -> bool:
         return module_args[0].requires_grad
@@ -111,6 +111,7 @@ class GraphWorker(FedAVGWorker):
 
         index_map = self.trainer.model_evaluator.node_and_neighbour_index_map[phase]
         x = args[0]
+        assert x.shape[0] == len(index_map)
         sent_data = {
             "node_embedding": torch.stack(
                 [
@@ -130,7 +131,7 @@ class GraphWorker(FedAVGWorker):
 
         for idx, node_index in enumerate(res["boundary"]):
             new_embedding = res["node_embedding"][idx].to(
-                new_x.device, non_blocking=False
+                new_x.device, non_blocking=True
             )
             idx = index_map[node_index]
             mask[idx] = True

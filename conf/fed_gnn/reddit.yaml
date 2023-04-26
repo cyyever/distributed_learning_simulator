@@ -1,0 +1,12 @@
+---
+dataset_name: Reddit
+model_name: SimpleGCN
+distributed_algorithm: fed_gcn
+epoch: 1
+learning_rate: 0.001
+weight_decay: 0
+round: 500
+worker_number: 100
+algorithm_kwargs:
+  share_node_feature: true
+  share_init_node_feature: false

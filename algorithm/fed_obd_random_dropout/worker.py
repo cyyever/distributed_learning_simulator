@@ -52,8 +52,8 @@ class FedOBDRandomDropoutWorker(FedAVGWorker, RandomDropoutAlgorithm):
     def _should_aggregate(self, **kwargs):
         if self.__phase != Phase.STAGE_TWO:
             return True
-        model_executor = kwargs["model_executor"]
-        if kwargs["epoch"] == model_executor.hyper_parameter.epoch:
+        executor = kwargs["executor"]
+        if kwargs["epoch"] == executor.hyper_parameter.epoch:
             self.__end_training = True
         return True
 

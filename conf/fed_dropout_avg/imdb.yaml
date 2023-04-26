@@ -10,7 +10,7 @@ learning_rate_scheduler: CosineAnnealingLR
 epoch: 5
 learning_rate: 0.01
 algorithm_kwargs:
-  dropout_rate: 0.9
+  dropout_rate: 0.3
   random_client_number: 5
 model_kwargs:
   max_len: 300
