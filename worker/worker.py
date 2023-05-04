@@ -130,8 +130,9 @@ class Worker(Executor):
                 self.trainer.set_visualizer_prefix(f"round: {self._round_num},")
                 self.trainer.set_save_dir(self.save_dir)
                 self.trainer.train(
-                    **kwargs,
+                    keep_best_model=True,
                     batch_loss_log_times=None if self.config.log_batch_loss else 0,
+                    **kwargs,
                 )
                 self._round_num += 1
         get_logger().debug("close endpoint")

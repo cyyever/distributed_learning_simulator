@@ -6,15 +6,13 @@ from worker.fed_avg_worker import FedAVGWorker
 
 class SingleModelAdaptiveFedDropoutWorker(FedAVGWorker):
     __parameter_keys: set = set()
-    __full_parameter_keys = None
 
     def _get_sent_data(self) -> dict:
         self._send_parameter_diff = False
-        self._choose_model_by_validation = False
         sent_data = super()._get_sent_data()
         sent_data |= {
             "training_loss": self.trainer.performance_metric.get_loss(
-                self.trainer.hyper_parameter.epoch
+                sent_data["model_epoch"]
             ).item()
         }
         assert self.__parameter_keys
@@ -30,6 +28,5 @@ class SingleModelAdaptiveFedDropoutWorker(FedAVGWorker):
         return sent_data
 
     def _load_result_from_server(self, result):
-        assert result["parameter"]
-        self.__parameter_keys = set(result["parameter"].keys())
+        self.__parameter_keys = set(result["partial_parameter"].keys())
         super()._load_result_from_server(result)

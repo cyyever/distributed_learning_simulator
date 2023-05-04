@@ -12,6 +12,8 @@ learning_rate: 0.01
 algorithm_kwargs:
   dropout_rate: 0.3
   random_client_number: 50
+dataset_kwargs:
+  max_len: 300
 model_kwargs:
   max_len: 300
   word_vector_name: glove.6B.100d

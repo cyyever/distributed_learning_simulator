@@ -3,14 +3,14 @@ dataset_name: IMDB
 model_name: TransformerClassificationModel
 distributed_algorithm: single_model_afd
 optimizer_name: SGD
-worker_number: 10
+worker_number: 100
 round: 100
 learning_rate_scheduler: CosineAnnealingLR
 epoch: 5
 batch_size: 64
 learning_rate: 0.01
 algorithm_kwargs:
-  random_client_number: 5
+  random_client_number: 50
   dropout_rate: 0.3
 dataset_kwargs:
   max_len: 300

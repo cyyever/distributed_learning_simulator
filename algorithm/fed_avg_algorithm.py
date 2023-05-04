@@ -14,6 +14,7 @@ class FedAVGAlgorithm(AggregationAlgorithm):
         self.__total_weights: dict | None = None
         self.__parameter: dict = {}
 
+
     def process_worker_data(
         self,
         worker_id: int,

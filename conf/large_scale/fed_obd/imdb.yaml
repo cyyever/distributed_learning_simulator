@@ -11,13 +11,15 @@ batch_size: 64
 learning_rate: 0.01
 endpoint_kwargs:
   server:
-    weight: 0.001
+    weight: 0.0001
   worker:
-    weight: 0.001
+    weight: 0.0001
 algorithm_kwargs:
   second_phase_epoch: 10
   dropout_rate: 0.3
   random_client_number: 50
+dataset_kwargs:
+  max_len: 300
 model_kwargs:
   max_len: 300
   word_vector_name: glove.6B.100d

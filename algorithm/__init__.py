@@ -13,6 +13,7 @@ from .fed_paq import *
 from .qsgd import *
 from .shapley_value import *
 from .sign_sgd import *
+from .afd import *
 
 
 def register_algorithms():

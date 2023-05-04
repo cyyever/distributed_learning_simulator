@@ -42,6 +42,7 @@ class FedAVGServer(AggregationServer):
         round_stat["test_acc"] = metric["acc"]
 
         self.__stat[self.round_number] = round_stat
+        os.makedirs(self.save_dir, exist_ok=True)
         with open(
             os.path.join(self.save_dir, "round_record.json"), "wt", encoding="utf8"
         ) as f:

@@ -26,15 +26,20 @@ class AggregationServer(Server):
     def _distribute_init_model(self):
         with self._get_context():
             if self.config.distribute_init_parameters:
-                parameter_dict = {}
-                if self.__init_global_model_path is not None:
-                    with open(os.path.join(self.__init_global_model_path), "rb") as f:
-                        parameter_dict = pickle.load(f)
-                else:
-                    parameter_dict = self.tester.model_util.get_parameter_dict()
-                    # save GPU memory
-                    self.tester.offload_from_gpu()
-                self.send_result({"parameter": parameter_dict})
+                self.send_result(
+                    self.__algorithm.process_init_model(self.__get_init_model())
+                )
+
+    def __get_init_model(self) -> dict:
+        parameter_dict: dict = {}
+        if self.__init_global_model_path is not None:
+            with open(os.path.join(self.__init_global_model_path), "rb") as f:
+                parameter_dict = pickle.load(f)
+        else:
+            parameter_dict = self.tester.model_util.get_parameter_dict()
+            # save GPU memory
+            self.tester.offload_from_gpu()
+        return parameter_dict
 
     def start(self):
         self._distribute_init_model()
@@ -76,10 +81,11 @@ class AggregationServer(Server):
                 self.save_dir, "aggregated_model", f"round_{self.round_number}.pk"
             )
             self._model_cache.cache_parameter_dict(parameter, model_path)
-            if self._send_parameter_path:
-                result["parameter_path"] = self._model_cache.get_parameter_path()
-            else:
-                result["parameter"] = parameter
+            if "partial_parameter" not in result:
+                if self._send_parameter_path:
+                    result["parameter_path"] = self._model_cache.get_parameter_path()
+                else:
+                    result["parameter"] = parameter
         super().send_result(result)
 
     def _stopped(self) -> bool:

@@ -40,15 +40,16 @@ class AggregationWorker(Client):
         raise NotImplementedError()
 
     def _get_sent_data(self) -> dict:
-        model_util = self.trainer.model_util
-        if self._choose_model_by_validation:
-            get_logger().debug("use best model")
-            if self.trainer.best_model is not None:
-                model_util = ModelUtil(self.trainer.best_model)
-
         sent_data = {
             "dataset_size": self.trainer.dataset_size,
         }
+        model_util = self.trainer.model_util
+        if self._choose_model_by_validation:
+            get_logger().debug("use best model")
+            assert self.trainer.best_model is not None
+            model_util = ModelUtil(self.trainer.best_model)
+            sent_data["model_epoch"] = self.trainer.best_epoch
+
         parameter = model_util.get_parameter_dict()
         if self._send_parameter_diff:
             sent_data["parameter_diff"] = self._model_cache.get_parameter_diff(
@@ -69,6 +70,10 @@ class AggregationWorker(Client):
             self._model_cache.load_file(result["parameter_path"])
         elif "parameter" in result:
             self._model_cache.cache_parameter_dict(result["parameter"], path=model_path)
+        elif "partial_parameter" in result:
+            self._model_cache.cache_parameter_dict(
+                result["partial_parameter"], path=model_path
+            )
         elif "parameter_diff" in result:
             self._model_cache.add_parameter_diff(
                 result["parameter_diff"], path=model_path

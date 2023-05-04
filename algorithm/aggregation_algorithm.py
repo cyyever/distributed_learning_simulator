@@ -2,15 +2,17 @@ import copy
 import os
 from typing import Any
 
-from cyy_naive_lib.log import get_logger
 from cyy_naive_lib.storage import DataStorage
 from cyy_torch_toolbox.device import get_cpu_device
 from cyy_torch_toolbox.tensor import tensor_to
 
 
 class AggregationAlgorithm:
-    def __init__(self):
+    def __init__(self) -> None:
         self._all_worker_data = {}
+
+    def process_init_model(self, parameter_dict):
+        return {"parameter": parameter_dict}
 
     @classmethod
     def get_ratios(cls, data_dict: dict, key_name: str) -> dict:
@@ -52,9 +54,6 @@ class AggregationAlgorithm:
         if "use_distributed_model" in res:
             assert old_parameter_dict is not None
             res["parameter"] = copy.deepcopy(old_parameter_dict)
-        if "quantized_parameter_diff" in res:
-            get_logger().debug("process quantized_parameter_diff")
-            res["parameter_diff"] = res.pop("quantized_parameter_diff")
         assert not ("parameter_diff" in res and "parameter" in res)
         if "parameter_diff" in res:
             assert old_parameter_dict is not None
@@ -82,7 +81,6 @@ class AggregationAlgorithm:
             worker_data=tensor_to(worker_data, device=get_cpu_device()),
             old_parameter_dict=old_parameter_dict,
         )
-        os.makedirs(os.path.join(save_dir, "worker_data"), exist_ok=True)
         worker_data = DataStorage(
             data=worker_data,
             data_path=os.path.join(save_dir, "worker_data", str(worker_id)),
