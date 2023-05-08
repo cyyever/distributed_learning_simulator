@@ -47,10 +47,10 @@ class AggregationWorker(Client):
         if self._choose_model_by_validation:
             get_logger().debug("use best model")
             assert self.trainer.best_model is not None
-            model_util = ModelUtil(self.trainer.best_model)
+            parameter = self.trainer.best_model
             sent_data["model_epoch"] = self.trainer.best_epoch
-
-        parameter = model_util.get_parameter_dict()
+        else:
+            parameter = model_util.get_parameter_dict()
         if self._send_parameter_diff:
             sent_data["parameter_diff"] = self._model_cache.get_parameter_diff(
                 parameter
