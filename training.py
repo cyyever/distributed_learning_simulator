@@ -7,7 +7,7 @@ import gevent
 
 # we use these env variables to save memory in large-scale training
 os.environ["CUDA_MODULE_LOADING"] = "LAZY"
-os.environ["USE_THREAD_DATALOADER"] =  "1"
+os.environ["USE_THREAD_DATALOADER"] = "1"
 from cyy_naive_lib.data_structure.process_initialization import \
     get_process_data
 from cyy_naive_lib.log import get_logger, set_file_handler
@@ -99,15 +99,15 @@ def train(
         initargs=[{"fun_kwargs": {"device_lock": device_lock, "topology": topology}}],
     )
     server_config = worker_config.get("server", None)
-    process_pool.exec(
+    process_pool.submit(
         start_executors,
         task_id=task_id,
         worker_configs=[],
         server_config=server_config,
     )
-    for process_idx, worker_configs in worker_config["worker"].items():
+    for worker_configs in worker_config["worker"].values():
         server_config = None
-        process_pool.exec(
+        process_pool.submit(
             start_executors,
             task_id=task_id,
             worker_configs=worker_configs,
