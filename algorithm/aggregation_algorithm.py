@@ -8,8 +8,9 @@ from cyy_torch_toolbox.tensor import tensor_to
 
 
 class AggregationAlgorithm:
-    def __init__(self) -> None:
+    def __init__(self, server=None) -> None:
         self._all_worker_data = {}
+        self._server = server
 
     def process_init_model(self, parameter_dict):
         return {"parameter": parameter_dict}
@@ -86,3 +87,6 @@ class AggregationAlgorithm:
             data_path=os.path.join(save_dir, "worker_data", str(worker_id)),
         )
         self._all_worker_data[worker_id] = worker_data
+
+    def aggregate_worker_data(self) -> dict:
+        raise NotImplementedError()
