@@ -6,14 +6,12 @@ try:
     from .fed_gnn import *
 except BaseException:
     pass
+from .afd import *
 from .fed_obd import *
-from .fed_obd_layer import *
-from .fed_obd_random_dropout import *
 from .fed_paq import *
 from .qsgd import *
 from .shapley_value import *
 from .sign_sgd import *
-from .afd import *
 
 
 def register_algorithms():
