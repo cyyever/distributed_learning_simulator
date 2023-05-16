@@ -1,6 +1,7 @@
 import os
 import pickle
 
+from algorithm.aggregation_algorithm import AggregationAlgorithm
 from cyy_naive_lib.log import get_logger
 from util.model_cache import ModelCache
 
@@ -8,16 +9,20 @@ from .server import Server
 
 
 class AggregationServer(Server):
-    def __init__(self, algorithm, *args, **kwargs):
+    def __init__(self, algorithm: AggregationAlgorithm, *args, **kwargs) -> None:
         Server.__init__(self, *args, **kwargs)
         self._model_cache: ModelCache = ModelCache()
         self._round_number = 1
         self._send_parameter_path = False
         self.__worker_flag: set = set()
-        self.__algorithm = algorithm
+        self.__algorithm: AggregationAlgorithm = algorithm
         self.__init_global_model_path = self.config.algorithm_kwargs.get(
             "global_model_path", None
         )
+
+    @property
+    def algorithm(self):
+        return self.__algorithm
 
     @property
     def round_number(self):
@@ -44,6 +49,9 @@ class AggregationServer(Server):
     def start(self):
         self._distribute_init_model()
         super().start()
+
+    def _server_exit(self) -> None:
+        self.__algorithm.exit()
 
     def _process_worker_data(self, worker_id, data):
         assert 0 <= worker_id < self.worker_number

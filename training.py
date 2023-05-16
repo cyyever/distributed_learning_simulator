@@ -65,8 +65,8 @@ def start_executors(
         if not hasattr(worker, "worker_id"):
             # server
             server = worker
-            if hasattr(server, "sv_algorithm"):
-                res["sv"] = server.sv_algorithm.shapley_values
+            if hasattr(server.algorithm, "shapley_values"):
+                res["sv"] = server.algorithm.shapley_values
             res |= server.performance_stat[server.round_number - 1]
             continue
     return res

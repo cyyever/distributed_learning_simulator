@@ -1,4 +1,6 @@
 import functools
+import json
+import os
 
 from algorithm.fed_avg_algorithm import FedAVGAlgorithm
 from cyy_naive_lib.log import get_logger
@@ -48,8 +50,22 @@ class ShapleyValueAlgorithm(FedAVGAlgorithm):
         assert worker_data
         worker_data_backup = self._all_worker_data
         self._all_worker_data = worker_data
-        metric = self._server.get_metric(super().aggregate_worker_data())[
-            self.metric_type
-        ]
+        metric = self._server.get_metric(
+            super().aggregate_worker_data(), keep_performance_logger=False
+        )[self.metric_type]
         self._all_worker_data = worker_data_backup
         return metric
+
+    def exit(self) -> None:
+        with open(
+            os.path.join(self._server.save_dir, "shapley_values.json"),
+            "wt",
+            encoding="utf8",
+        ) as f:
+            json.dump(self.sv_algorithm.shapley_values, f)
+        with open(
+            os.path.join(self._server.save_dir, "shapley_values_S.json"),
+            "wt",
+            encoding="utf8",
+        ) as f:
+            json.dump(self.sv_algorithm.shapley_values_S, f)

@@ -32,13 +32,19 @@ class Server(Executor):
             self.__tester.disable_hook("logger")
         return self.__tester
 
-    def get_metric(self, parameter_dict: dict) -> dict:
+    def get_metric(
+        self, parameter_dict: dict, keep_performance_logger: bool = True
+    ) -> dict:
         if "parameter" in parameter_dict:
             parameter_dict = parameter_dict["parameter"]
         self.tester.model_util.load_parameter_dict(parameter_dict)
         self.tester.model_util.disable_running_stats()
         self.tester.set_save_dir(self.save_dir)
         self.tester.set_device(self._get_device())
+        if keep_performance_logger:
+            self.__tester.enable_hook("performance_metric_logger")
+        else:
+            self.__tester.disable_hook("performance_metric_logger")
         self.tester.inference(epoch=1)
         metric = {
             "acc": self.tester.performance_metric.get_accuracy(1).item(),
@@ -68,6 +74,10 @@ class Server(Executor):
 
         with self._get_context():
             get_logger().warning("end server")
+            self._server_exit()
+
+    def _server_exit(self) -> None:
+        pass
 
     def _process_worker_data(self, worker_id, data):
         raise NotImplementedError()
