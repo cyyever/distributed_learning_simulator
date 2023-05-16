@@ -90,3 +90,6 @@ class AggregationAlgorithm:
 
     def aggregate_worker_data(self) -> dict:
         raise NotImplementedError()
+
+    def exit(self) -> None:
+        pass
