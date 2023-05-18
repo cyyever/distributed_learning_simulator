@@ -1,3 +1,5 @@
+from typing import Any
+
 import gevent
 from executor import ExecutorContext
 
@@ -5,7 +7,7 @@ from .worker import Worker
 
 
 class Client(Worker):
-    def send_data_to_server(self, data) -> None:
+    def send_data_to_server(self, data: Any) -> None:
         self._endpoint.send(data)
 
     def _get_result_from_server(self) -> dict:

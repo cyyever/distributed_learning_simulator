@@ -10,7 +10,7 @@ os.environ["CUDA_MODULE_LOADING"] = "LAZY"
 os.environ["USE_THREAD_DATALOADER"] = "1"
 from cyy_naive_lib.data_structure.process_initialization import \
     get_process_data
-from cyy_naive_lib.log import get_logger, set_file_handler
+from cyy_naive_lib.log import add_file_handler, get_logger
 from cyy_torch_toolbox.data_structure.torch_process_pool import \
     TorchProcessPool
 
@@ -88,7 +88,7 @@ def train(
                 f"Your open file limit {value} is too small, the training will open lots of files."
             )
     config.apply_global_config()
-    set_file_handler(config.log_file)
+    add_file_handler(config.log_file)
     worker_config = get_worker_config(config, practitioner_ids=practitioner_ids)
     topology = worker_config.pop("topology")
     device_lock = multiprocessing.Manager().RLock()

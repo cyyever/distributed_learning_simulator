@@ -1,6 +1,7 @@
 import datetime
 import os
 import uuid
+from typing import Any
 
 import hydra
 import omegaconf
@@ -9,7 +10,7 @@ from cyy_torch_toolbox.device import get_devices
 
 
 class DistributedTrainingConfig(DefaultConfig):
-    def __init__(self, **kwargs: dict) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.distributed_algorithm: str = ""
         self.worker_number: int = 0

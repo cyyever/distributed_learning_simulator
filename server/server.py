@@ -1,5 +1,6 @@
 import copy
 import random
+from typing import Any
 
 import gevent
 import gevent.lock
@@ -10,7 +11,7 @@ from executor import Executor
 
 
 class Server(Executor):
-    def __init__(self, task_id: int, **kwargs: dict) -> None:
+    def __init__(self, task_id: int, **kwargs: Any) -> None:
         name: str = "server"
         if task_id is not None:
             name = f"server of {task_id}"

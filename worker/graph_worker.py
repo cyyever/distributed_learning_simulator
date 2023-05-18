@@ -1,4 +1,5 @@
 import functools
+from typing import Any
 
 import torch
 import torch_geometric.nn
@@ -10,7 +11,7 @@ from worker.fed_avg_worker import FedAVGWorker
 
 
 class GraphWorker(FedAVGWorker):
-    def __init__(self, **kwargs: dict) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._share_init_node_feature = self.config.algorithm_kwargs.get(
             "share_init_node_feature", False

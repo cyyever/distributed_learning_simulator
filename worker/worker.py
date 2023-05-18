@@ -67,7 +67,7 @@ class Worker(Executor):
         task_id: Any,
         worker_id: int,
         practitioner: Practitioner,
-        **kwargs: dict,
+        **kwargs: Any,
     ):
         name = f"worker {worker_id}"
         if task_id is not None:
@@ -113,7 +113,7 @@ class Worker(Executor):
     def _stopped(self) -> bool:
         return self._round_num > self.config.round or self._force_stop
 
-    def start(self, **kwargs: dict) -> None:
+    def start(self, **kwargs: Any) -> None:
         first_training: bool = True
         self._round_num = 1
         while not self._stopped():

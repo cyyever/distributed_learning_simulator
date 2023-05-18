@@ -1,8 +1,8 @@
 import os
+from typing import Any
 
 from cyy_naive_lib.log import get_logger
 from cyy_torch_toolbox.ml_type import ExecutorHookPoint, StopExecutingException
-from cyy_torch_toolbox.model_util import ModelUtil
 from util.model import load_parameters
 from util.model_cache import ModelCache
 
@@ -10,7 +10,7 @@ from .client import Client
 
 
 class AggregationWorker(Client):
-    def __init__(self, **kwargs: dict) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._aggregation_time = ExecutorHookPoint.AFTER_EXECUTE
         self._reuse_learning_rate: bool = False

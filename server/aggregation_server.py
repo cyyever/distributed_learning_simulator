@@ -1,5 +1,6 @@
 import os
 import pickle
+from typing import Any
 
 from algorithm.aggregation_algorithm import AggregationAlgorithm
 from cyy_naive_lib.log import get_logger
@@ -9,7 +10,9 @@ from .server import Server
 
 
 class AggregationServer(Server):
-    def __init__(self, algorithm: AggregationAlgorithm, *args, **kwargs) -> None:
+    def __init__(
+        self, algorithm: AggregationAlgorithm, *args: Any, **kwargs: Any
+    ) -> None:
         Server.__init__(self, *args, **kwargs)
         self._model_cache: ModelCache = ModelCache()
         self._round_number = 1
@@ -46,7 +49,7 @@ class AggregationServer(Server):
             self.tester.offload_from_gpu()
         return parameter_dict
 
-    def start(self):
+    def start(self) -> None:
         self._distribute_init_model()
         super().start()
 
@@ -73,16 +76,16 @@ class AggregationServer(Server):
                 self.worker_number,
             )
 
-    def _aggregate_worker_data(self):
+    def _aggregate_worker_data(self) -> dict:
         return self.__algorithm.aggregate_worker_data()
 
-    def _after_aggregate_worker_data(self, result):
+    def _after_aggregate_worker_data(self, result) -> None:
         self.send_result(result)
         if "in_round_data" not in result:
             self._round_number += 1
         self.__worker_flag.clear()
 
-    def send_result(self, result):
+    def send_result(self, result) -> None:
         parameter = result.pop("parameter", None)
         if parameter is not None:
             model_path = os.path.join(

@@ -2,6 +2,7 @@ import copy
 import multiprocessing
 import os
 import threading
+from typing import Any, Callable
 
 import gevent.local
 import gevent.lock
@@ -13,7 +14,7 @@ class ExecutorContext:
     semaphore = gevent.lock.BoundedSemaphore(value=1)
     local_data = gevent.local.local()
 
-    def __init__(self, name: str):
+    def __init__(self, name: str) -> None:
         self.__name = name
 
     def acquire(self) -> None:
@@ -25,10 +26,10 @@ class ExecutorContext:
     def __enter__(self) -> None:
         self.acquire()
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, *args: Any, **kwargs: Any) -> None:
         self.release()
 
-    def release(self):
+    def release(self) -> None:
         multiprocessing.current_process().name = "unknown executor"
         threading.current_thread().name = "unknown executor"
         self.semaphore.release()
@@ -45,7 +46,7 @@ class Executor:
         self.__device_lock = device_lock
         self.__hold_device_lock = False
 
-    def _get_device(self, lock_callback=None):
+    def _get_device(self, lock_callback: None | Callable = None) -> torch.device:
         if not hasattr(self.__thread_data, "device"):
             if torch.cuda.is_available():
                 if not self.__hold_device_lock:
@@ -64,7 +65,7 @@ class Executor:
     def _get_context(self) -> ExecutorContext:
         return ExecutorContext(name=self._name)
 
-    def _release_device_lock(self, **kwargs):
+    def _release_device_lock(self, **kwargs: Any) -> None:
         if self.__hold_device_lock:
             if hasattr(self.__thread_data, "device"):
                 stats = torch.cuda.memory_stats(device=self.__thread_data.device)
@@ -73,7 +74,7 @@ class Executor:
             self.__device_lock.release()
             self.__hold_device_lock = False
 
-    def start(self):
+    def start(self) -> None:
         raise NotImplementedError()
 
     @property
