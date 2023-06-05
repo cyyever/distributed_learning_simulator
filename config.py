@@ -27,7 +27,7 @@ class DistributedTrainingConfig(DefaultConfig):
         self.frozen_modules: list = []
 
     def load_config_and_process(self, conf) -> None:
-        DefaultConfig.load_config(self, conf)
+        self.load_config(conf)
         task_time = datetime.datetime.now()
         date_time = "{date:%Y-%m-%d_%H_%M_%S}".format(date=task_time)
         log_suffix = self.algorithm_kwargs.get("log_suffix", "")

@@ -17,8 +17,8 @@ class ServerEndpoint(Endpoint):
     def get(self, worker_id):
         return self._topology.get_from_worker(worker_id=worker_id)
 
-    def send(self, data, worker_id):
-        self._topology.send_to_worker(data, worker_id)
+    def send(self, worker_id: int, data: Any) -> None:
+        self._topology.send_to_worker(worker_id=worker_id, data=data)
 
     def broadcast(self, data: Any, worker_ids: None | list | set = None) -> None:
         all_worker_ids = set(range(self.worker_num))
@@ -27,7 +27,7 @@ class ServerEndpoint(Endpoint):
         else:
             worker_ids = set(worker_ids).intersection(all_worker_ids)
         for worker_id in worker_ids:
-            self.send(data, worker_id)
+            self.send(worker_id=worker_id, data=data)
 
     def wait_close(self):
         self._topology.wait_close()
@@ -47,7 +47,7 @@ class ClientEndpoint(Endpoint):
         return self._topology.server_has_data(self.__worker_id)
 
     def send(self, data):
-        self._topology.send_to_server(self.__worker_id, data)
+        self._topology.send_to_server(worker_id=self.__worker_id, data=data)
 
     def close(self):
         self._topology.close()

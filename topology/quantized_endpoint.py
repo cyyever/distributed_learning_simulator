@@ -16,7 +16,12 @@ class QuantClientEndpoint(ClientEndpoint):
 
     def get(self):
         data = super().get()
+        if data is None:
+            return data
         if self.dequant_server_data:
+            for key in self.quantized_keys:
+                if key in data:
+                    data[key] = self._dequant(data[key])
             return self._dequant(data)
         return data
 

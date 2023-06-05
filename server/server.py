@@ -90,7 +90,7 @@ class Server(Executor):
     def send_result(self, result):
         if "worker_result" in result:
             for worker_id, data in result["worker_result"].items():
-                self._endpoint.send(data, worker_id)
+                self._endpoint.send(worker_id=worker_id, data=data)
             return
 
         selected_workers = self._select_workers()
