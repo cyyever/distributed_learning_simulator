@@ -42,16 +42,20 @@ class FedAVGServer(AggregationServer):
         round_stat["test_acc"] = metric["acc"]
 
         self.__stat[self.round_number] = round_stat
-        os.makedirs(self.save_dir, exist_ok=True)
+        os.makedirs(self.config.save_dir, exist_ok=True)
         with open(
-            os.path.join(self.save_dir, "round_record.json"), "wt", encoding="utf8"
+            os.path.join(self.config.save_dir, "round_record.json"),
+            "wt",
+            encoding="utf8",
         ) as f:
             json.dump(self.__stat, f)
 
         max_acc = max(t["test_acc"] for t in self.__stat.values())
         if max_acc > self.__max_acc:
             self.__max_acc = max_acc
-            with open(os.path.join(self.save_dir, "best_global_model.pk"), "wb") as f:
+            with open(
+                os.path.join(self.config.save_dir, "best_global_model.pk"), "wb"
+            ) as f:
                 pickle.dump(
                     parameter_dict,
                     f,

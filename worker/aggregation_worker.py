@@ -18,7 +18,7 @@ class AggregationWorker(Client):
         self._send_parameter_diff: bool = True
         self._model_cache: ModelCache = ModelCache()
 
-    def _register_aggregation(self):
+    def _register_aggregation(self) -> None:
         get_logger().debug("use aggregation_time %s", self._aggregation_time)
         self.trainer.remove_named_hook(name="aggregation")
         self.trainer.append_named_hook(
@@ -27,10 +27,10 @@ class AggregationWorker(Client):
             self.__aggregation_impl,
         )
 
-    def _should_aggregate(self, **kwargs):
+    def _should_aggregate(self, **kwargs) -> True:
         return True
 
-    def __aggregation_impl(self, **kwargs):
+    def __aggregation_impl(self, **kwargs) -> None:
         if not self._should_aggregate(**kwargs):
             return
         sent_data = self._get_sent_data()
@@ -40,7 +40,7 @@ class AggregationWorker(Client):
         raise NotImplementedError()
 
     def _get_sent_data(self) -> dict:
-        sent_data = {
+        sent_data: dict[str, Any] = {
             "dataset_size": self.trainer.dataset_size,
         }
         model_util = self.trainer.model_util
@@ -64,7 +64,7 @@ class AggregationWorker(Client):
             self._force_stop = True
             raise StopExecutingException()
         model_path = os.path.join(
-            self.save_dir, "aggregated_model", f"round_{self._round_num}.pk"
+            self.config.save_dir, "aggregated_model", f"round_{self._round_num}.pk"
         )
         if "parameter_path" in result:
             self._model_cache.load_file(result["parameter_path"])

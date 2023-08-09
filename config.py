@@ -21,7 +21,7 @@ class DistributedTrainingConfig(DefaultConfig):
         self.distribute_init_parameters: bool = True
         self.server_send_file: bool = False
         self.log_file: None | str = None
-        self.offload_memory: bool = False
+        self.offload_device: bool = False
         self.endpoint_kwargs: dict = {}
         self.algorithm_kwargs: dict = {}
         self.frozen_modules: list = []
@@ -29,15 +29,14 @@ class DistributedTrainingConfig(DefaultConfig):
     def load_config_and_process(self, conf) -> None:
         self.load_config(conf)
         task_time = datetime.datetime.now()
-        date_time = "{date:%Y-%m-%d_%H_%M_%S}".format(date=task_time)
-        log_suffix = self.algorithm_kwargs.get("log_suffix", "")
+        date_time = f"{task_time:%Y-%m-%d_%H_%M_%S}"
         dataset_name = self.dc_config.dataset_kwargs.get(
             "name", self.dc_config.dataset_name
         )
         dir_suffix = os.path.join(
-            self.distributed_algorithm + log_suffix
+            self.distributed_algorithm
             if self.iid
-            else self.distributed_algorithm + "_non_iid" + log_suffix,
+            else self.distributed_algorithm + "_non_iid",
             dataset_name,
             self.model_config.model_name,
             date_time,

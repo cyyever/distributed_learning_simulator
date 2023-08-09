@@ -124,6 +124,6 @@ class GradientWorker(Client):
             epoch
         ).data.item()
         with open(
-            os.path.join(self.save_dir, "epoch_stat.json"), "wt", encoding="utf8"
+            os.path.join(self.config.save_dir, "epoch_stat.json"), "wt", encoding="utf8"
         ) as f:
             json.dump(self.__epoch_stat, f)

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Iterable
 
 from .central_topology import CentralTopology
 from .endpoint import Endpoint
@@ -20,7 +20,7 @@ class ServerEndpoint(Endpoint):
     def send(self, worker_id: int, data: Any) -> None:
         self._topology.send_to_worker(worker_id=worker_id, data=data)
 
-    def broadcast(self, data: Any, worker_ids: None | list | set = None) -> None:
+    def broadcast(self, data: Any, worker_ids: None | Iterable = None) -> None:
         all_worker_ids = set(range(self.worker_num))
         if worker_ids is None:
             worker_ids = all_worker_ids

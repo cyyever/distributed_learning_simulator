@@ -1,7 +1,7 @@
-from cyy_torch_toolbox.data_structure.torch_process_task_queue import (
-    TorchProcessTaskQueue,
-)
 from typing import Any
+
+from cyy_torch_toolbox.data_structure.torch_process_task_queue import \
+    TorchProcessTaskQueue
 
 from .topology import Topology
 
@@ -40,9 +40,7 @@ class ProcessCentralTopology(CentralTopology):
         super().__init__(*args, **kwargs)
         self.__queue = TorchProcessTaskQueue(
             worker_num=0,
-            send_tensor_in_cpu=False,
             use_manager=False,
-            assemble_tensor=False,
         )
         for worker_id in range(self.worker_num):
             self.__queue.add_queue(f"result_{worker_id}")

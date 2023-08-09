@@ -40,27 +40,26 @@ class Server(Executor):
             parameter_dict = parameter_dict["parameter"]
         self.tester.model_util.load_parameter_dict(parameter_dict)
         self.tester.model_util.disable_running_stats()
-        self.tester.set_save_dir(self.save_dir)
         self.tester.set_device(self._get_device())
         if keep_performance_logger:
-            self.__tester.enable_hook("performance_metric_logger")
+            self.tester.enable_hook("performance_metric_logger")
         else:
-            self.__tester.disable_hook("performance_metric_logger")
+            self.tester.disable_hook("performance_metric_logger")
         self.tester.inference(epoch=1)
         metric = {
             "acc": self.tester.performance_metric.get_accuracy(1).item(),
             "loss": self.tester.performance_metric.get_loss(1).item(),
         }
         self._release_device_lock()
-        self.tester.offload_from_gpu()
+        self.tester.offload_from_device()
         return metric
 
-    def start(self):
-        worker_set = set()
+    def start(self) -> None:
+        worker_set: set = set()
         while not self._stopped():
             if not worker_set:
                 worker_set = set(range(self._endpoint.worker_num))
-            with self._get_context():
+            with self._get_execution_context():
                 for worker_id in copy.copy(worker_set):
                     has_data: bool = self._endpoint.has_data(worker_id)
                     if has_data:
@@ -73,21 +72,21 @@ class Server(Executor):
                 get_logger().debug("wait result")
                 gevent.sleep(1)
 
-        with self._get_context():
+        with self._get_execution_context():
             get_logger().warning("end server")
             self._server_exit()
 
     def _server_exit(self) -> None:
         pass
 
-    def _process_worker_data(self, worker_id, data):
+    def _process_worker_data(self, worker_id: int, data: Any):
         raise NotImplementedError()
 
     @property
-    def worker_number(self):
+    def worker_number(self) -> int:
         return self.config.worker_number
 
-    def send_result(self, result):
+    def send_result(self, result: dict) -> None:
         if "worker_result" in result:
             for worker_id, data in result["worker_result"].items():
                 self._endpoint.send(worker_id=worker_id, data=data)

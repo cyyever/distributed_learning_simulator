@@ -5,7 +5,7 @@ from typing import Any
 
 import torch
 from cyy_naive_lib.log import get_logger
-from cyy_torch_toolbox.ml_type import ExecutorHookPoint, MachineLearningPhase
+from cyy_torch_toolbox.ml_type import ExecutorHookPoint
 from cyy_torch_toolbox.trainer import Trainer
 from executor import Executor
 from practitioner import Practitioner
@@ -64,11 +64,11 @@ def total_size(o, handlers={}):
 class Worker(Executor):
     def __init__(
         self,
-        task_id: Any,
+        task_id: int,
         worker_id: int,
         practitioner: Practitioner,
         **kwargs: Any,
-    ):
+    ) -> None:
         name = f"worker {worker_id}"
         if task_id is not None:
             name = f"worker {worker_id} of {task_id}"
@@ -86,8 +86,8 @@ class Worker(Executor):
     def trainer(self) -> Trainer:
         return self.__practitioner.create_trainer(self.config)
 
-    def _offload_from_memory(self) -> None:
-        self.trainer.offload_from_gpu()
+    def _offload_from_device(self) -> None:
+        self.trainer.offload_from_device()
         self.trainer.get_hook("keep_model_hook").clear()
         # self.trainer.model_util.clear_parameters()
         # for phase in MachineLearningPhase:
@@ -98,17 +98,8 @@ class Worker(Executor):
         #     self.trainer.remove_optimizer()
         # print(total_size(self))
 
-    def _before_training(self):
-        self._force_stop = False
-        self.trainer.set_device(
-            self._get_device(
-                lock_callback=lambda: self.trainer.append_named_hook(
-                    ExecutorHookPoint.AFTER_BATCH,
-                    "release_device_lock",
-                    self._release_device_lock,
-                )
-            )
-        )
+    def _before_training(self) -> None:
+        pass
 
     def _stopped(self) -> bool:
         return self._round_num > self.config.round or self._force_stop
@@ -116,25 +107,34 @@ class Worker(Executor):
     def start(self, **kwargs: Any) -> None:
         first_training: bool = True
         self._round_num = 1
+        self._force_stop = False
         while not self._stopped():
             # in case worker changes round number
-            with self._get_context():
+            with self._get_execution_context():
                 if first_training:
                     self._before_training()
                     first_training = False
                     # in case worker changes round number
                     if self._stopped():
                         break
+                    self.trainer.set_device(
+                        self._get_device(
+                            lock_callback=lambda: self.trainer.append_named_hook(
+                                ExecutorHookPoint.AFTER_BATCH,
+                                "release_device_lock",
+                                self._release_device_lock,
+                            )
+                        )
+                    )
                 else:
                     self.trainer.disable_hook("logger")
                 self.trainer.set_visualizer_prefix(f"round: {self._round_num},")
-                self.trainer.set_save_dir(self.save_dir)
                 self.trainer.train(
                     keep_best_model=True,
                     batch_loss_log_times=None if self.config.log_batch_loss else 0,
                     **kwargs,
                 )
                 self._round_num += 1
+        get_logger().debug("finish worker %s", self.worker_id)
         get_logger().debug("close endpoint")
         self._endpoint.close()
-        get_logger().debug("finish worker %s", self.worker_id)

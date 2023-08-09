@@ -1,3 +1,5 @@
+from typing import Any, Callable
+
 from cyy_naive_lib.log import get_logger
 from cyy_torch_algorithm.quantization.deterministic import (
     NNADQ, NeuralNetworkAdaptiveDeterministicDequant,
@@ -8,9 +10,10 @@ from .cs_endpoint import ClientEndpoint, ServerEndpoint
 
 
 class QuantClientEndpoint(ClientEndpoint):
-    def __init__(self, quant, dequant, **kwargs):
+    def __init__(self, quant: Callable, dequant: Callable, **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        self._quant, self._dequant = quant, dequant
+        self._quant: Callable = quant
+        self._dequant: Callable = dequant
         self.quantized_keys: set = set(["parameter", "parameter_diff"])
         self.dequant_server_data: bool = False
 
@@ -49,9 +52,10 @@ class QuantClientEndpoint(ClientEndpoint):
 
 
 class QuantServerEndpoint(ServerEndpoint):
-    def __init__(self, quant, dequant, **kwargs):
+    def __init__(self, quant: Callable, dequant: Callable, **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        self._quant, self._dequant = quant, dequant
+        self._quant: Callable = quant
+        self._dequant: Callable = dequant
         self.quant_broadcast: bool = False
         self.client_quantized_keys: set = set(["parameter", "parameter_diff"])
         self.quantized_keys: set = set(["parameter", "parameter_diff"])

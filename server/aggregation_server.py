@@ -32,7 +32,7 @@ class AggregationServer(Server):
         return self._round_number
 
     def _distribute_init_model(self):
-        with self._get_context():
+        with self._get_execution_context():
             if self.config.distribute_init_parameters:
                 self.send_result(
                     self.__algorithm.process_init_model(self.__get_init_model())
@@ -46,7 +46,7 @@ class AggregationServer(Server):
         else:
             parameter_dict = self.tester.model_util.get_parameter_dict()
             # save GPU memory
-            self.tester.offload_from_gpu()
+            self.tester.offload_from_device()
         return parameter_dict
 
     def start(self) -> None:
@@ -62,7 +62,7 @@ class AggregationServer(Server):
         self.__algorithm.process_worker_data(
             worker_id=worker_id,
             worker_data=data,
-            save_dir=self.save_dir,
+            save_dir=self.config.save_dir,
             old_parameter_dict=self._model_cache.get_parameter_dict,
         )
         self.__worker_flag.add(worker_id)
@@ -89,7 +89,7 @@ class AggregationServer(Server):
         parameter = result.pop("parameter", None)
         if parameter is not None:
             model_path = os.path.join(
-                self.save_dir, "aggregated_model", f"round_{self.round_number}.pk"
+                self.config.save_dir, "aggregated_model", f"round_{self.round_number}.pk"
             )
             self._model_cache.cache_parameter_dict(parameter, model_path)
             if "partial_parameter" not in result:

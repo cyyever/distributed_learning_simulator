@@ -1,15 +1,12 @@
-import copy
 import os
 import pickle
 import sqlite3
 
 from cyy_torch_toolbox.dataset_collection import DatasetCollectionConfig
-from cyy_torch_toolbox.ml_type import DatasetType, MachineLearningPhase
+from cyy_torch_toolbox.ml_type import MachineLearningPhase
 
 
 class Practitioner:
-    cached_graph_dataset: dict = {}
-
     def __init__(self, practitioner_id: int):
         self.practitioner_id = practitioner_id
         self._dataset_indices: dict = {}
@@ -21,15 +18,8 @@ class Practitioner:
         return name in self._dataset_indices
 
     def create_trainer(self, config):
-        dc = Practitioner.cached_graph_dataset.get(config.dc_config.dataset_name, None)
-        if dc is None:
-            dc = config.create_dataset_collection()
-            if dc.dataset_type == DatasetType.Graph:
-                Practitioner.cached_graph_dataset[config.dc_config.dataset_name] = dc
-        if dc.dataset_type == DatasetType.Graph:
-            trainer = config.create_trainer(dc=copy.copy(dc))
-        else:
-            trainer = config.create_trainer(dc=dc)
+        dc = config.create_dataset_collection()
+        trainer = config.create_trainer(dc=dc)
         for phase in MachineLearningPhase:
             trainer.dataset_collection.set_subset(
                 phase=phase,

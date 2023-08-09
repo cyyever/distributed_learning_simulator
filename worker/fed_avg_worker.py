@@ -6,6 +6,7 @@ from .aggregation_worker import AggregationWorker
 
 class FedAVGWorker(AggregationWorker):
     def _before_training(self):
+        super()._before_training()
         self.trainer.dataset_collection.remove_dataset(phase=MachineLearningPhase.Test)
         # load initial parameters
         if self.config.distribute_init_parameters:
@@ -13,15 +14,14 @@ class FedAVGWorker(AggregationWorker):
             if self._stopped():
                 return
         self._register_aggregation()
-        super()._before_training()
 
-    def _offload_from_memory(self) -> None:
-        super()._offload_from_memory()
-        if self.config.offload_memory:
+    def _offload_from_device(self) -> None:
+        super()._offload_from_device()
+        if self.config.offload_device:
             self._model_cache.save()
 
     def __get_result_from_server(self) -> bool:
-        self._offload_from_memory()
+        self._offload_from_device()
         while True:
             result = super()._get_result_from_server()
             get_logger().debug("get result from server %s", type(result))
@@ -38,5 +38,5 @@ class FedAVGWorker(AggregationWorker):
 
     def _aggregation(self, sent_data):
         self.send_data_to_server(sent_data)
-        self._offload_from_memory()
+        self._offload_from_device()
         self.__get_result_from_server()
