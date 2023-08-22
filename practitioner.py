@@ -3,7 +3,9 @@ import pickle
 import sqlite3
 
 from cyy_torch_toolbox.dataset_collection import DatasetCollectionConfig
+from cyy_torch_toolbox.default_config import DefaultConfig
 from cyy_torch_toolbox.ml_type import MachineLearningPhase
+from cyy_torch_toolbox.trainer import Trainer
 
 
 class Practitioner:
@@ -17,7 +19,7 @@ class Practitioner:
     def has_dataset(self, name: str) -> bool:
         return name in self._dataset_indices
 
-    def create_trainer(self, config):
+    def create_trainer(self, config: DefaultConfig) -> Trainer:
         dc = config.create_dataset_collection()
         trainer = config.create_trainer(dc=dc)
         for phase in MachineLearningPhase:

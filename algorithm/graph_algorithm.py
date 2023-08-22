@@ -24,20 +24,21 @@ class GraphNodeEmbeddingPassingAlgorithm(FedAVGAlgorithm):
             old_parameter_dict=old_parameter_dict,
             save_dir=save_dir,
         )
+        assert self.accumulate
         worker_data = self._all_worker_data[worker_id].data
         if worker_data is None:
             return
         node_embedding = worker_data.pop("node_embedding", None)
         if node_embedding is not None:
-            boundary = worker_data.pop("boundary")
-            for tensor_idx, node_idx in enumerate(sorted(boundary.keys())):
+            node_embedding, node_indices = node_embedding
+            for tensor_idx, node_idx in enumerate(node_indices):
                 assert node_idx not in self.__node_embedding_indices
                 self.__node_embedding_indices[node_idx] = (
                     len(self.__node_embeddings),
                     tensor_idx,
                 )
             self.__node_embeddings.append(node_embedding)
-            self.__boundaris[worker_id] = boundary
+            self.__boundaris[worker_id] = worker_data.pop("boundary")
 
     def __get_node_embedding(self, node_idx):
         list_idx, tensor_idx = self.__node_embedding_indices[node_idx]
@@ -45,20 +46,27 @@ class GraphNodeEmbeddingPassingAlgorithm(FedAVGAlgorithm):
 
     def aggregate_worker_data(self) -> dict:
         res = super().aggregate_worker_data()
+        if "training_node_indices" in res:
+            res["training_node_indices"] = {}
+            for worker_id, worker_data in self._all_worker_data.items():
+                worker_data = worker_data.data
+                if "training_node_indices" in worker_data:
+                    res["training_node_indices"][worker_id] = worker_data[
+                        "training_node_indices"
+                    ]
+
         if self.__node_embeddings:
             res["worker_result"] = {}
+            node_embedding_index_set = set(self.__node_embedding_indices.keys())
             for worker_id, boundary in self.__boundaris.items():
-                new_boundary = [
-                    node_idx
-                    for node_idx in sorted(boundary)
-                    if node_idx in self.__node_embedding_indices
-                ]
+                node_indices = boundary.intersection(node_embedding_index_set)
+                node_indices = tuple(sorted(node_indices))
                 res["worker_result"][worker_id] = {
-                    "boundary": new_boundary,
+                    "node_indices": node_indices,
                     "node_embedding": torch.stack(
                         [
-                            self.__get_node_embedding(node_idx)
-                            for node_idx in new_boundary
+                            self.__get_node_embedding(node_idx).cpu()
+                            for node_idx in node_indices
                         ]
                     ),
                 }

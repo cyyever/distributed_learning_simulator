@@ -16,7 +16,7 @@ class DistributedTrainingConfig(DefaultConfig):
         self.worker_number: int = 0
         self.parallel_number: int = len(get_devices())
         self.round: int = 0
-        self.iid: bool = True
+        self.dataset_split_method: str = "iid"
         self.log_batch_loss: bool = False
         self.distribute_init_parameters: bool = True
         self.server_send_file: bool = False
@@ -26,7 +26,7 @@ class DistributedTrainingConfig(DefaultConfig):
         self.algorithm_kwargs: dict = {}
         self.frozen_modules: list = []
 
-    def load_config_and_process(self, conf) -> None:
+    def load_config_and_process(self, conf: Any) -> None:
         self.load_config(conf)
         task_time = datetime.datetime.now()
         date_time = f"{task_time:%Y-%m-%d_%H_%M_%S}"
@@ -35,8 +35,8 @@ class DistributedTrainingConfig(DefaultConfig):
         )
         dir_suffix = os.path.join(
             self.distributed_algorithm
-            if self.iid
-            else self.distributed_algorithm + "_non_iid",
+            if self.dataset_split_method.lower() == "iid"
+            else f"{self.distributed_algorithm}_{self.dataset_split_method}",
             dataset_name,
             self.model_config.model_name,
             date_time,

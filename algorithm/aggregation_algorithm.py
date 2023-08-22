@@ -9,7 +9,7 @@ from cyy_torch_toolbox.tensor import tensor_to
 
 class AggregationAlgorithm:
     def __init__(self, server=None) -> None:
-        self._all_worker_data = {}
+        self._all_worker_data: dict = {}
         self._server = server
 
     def process_init_model(self, parameter_dict):

@@ -1,13 +1,13 @@
 import multiprocessing
 import os
-import sys
-import uuid
-
-import gevent
 
 # we use these env variables to save memory in large-scale training
 os.environ["CUDA_MODULE_LOADING"] = "LAZY"
 os.environ["USE_THREAD_DATALOADER"] = "1"
+import sys
+import uuid
+
+import gevent
 from cyy_naive_lib.data_structure.process_initialization import \
     get_process_data
 from cyy_naive_lib.log import add_file_handler, get_logger
@@ -24,7 +24,6 @@ def start_executors(
     worker_configs: list[dict],
     server_config: None | dict = None,
 ) -> dict:
-
     device_lock = get_process_data()["device_lock"]
     topology = get_process_data()["topology"]
     workers: list = []

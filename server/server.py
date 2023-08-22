@@ -47,7 +47,7 @@ class Server(Executor):
             self.tester.disable_hook("performance_metric_logger")
         self.tester.inference(epoch=1)
         metric = {
-            "acc": self.tester.performance_metric.get_accuracy(1).item(),
+            "acc": self.tester.performance_metric.get_accuracy(1),
             "loss": self.tester.performance_metric.get_loss(1).item(),
         }
         self._release_device_lock()

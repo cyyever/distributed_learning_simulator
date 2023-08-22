@@ -7,13 +7,12 @@ from .aggregation_algorithm import AggregationAlgorithm
 
 
 class FedAVGAlgorithm(AggregationAlgorithm):
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.accumulate: bool = True
         self.__dtypes: dict = {}
-        self.__total_weights: dict | None = None
+        self.__total_weights: dict = {}
         self.__parameter: dict = {}
-
 
     def process_worker_data(
         self,
@@ -34,8 +33,6 @@ class FedAVGAlgorithm(AggregationAlgorithm):
             return
         if "dataset_size" not in self._all_worker_data[worker_id].data:
             return
-        if self.__total_weights is None:
-            self.__total_weights = {}
         dataset_size = self._all_worker_data[worker_id].data["dataset_size"]
         for k, v in self._all_worker_data[worker_id].data["parameter"].items():
             self.__dtypes[k] = v.dtype
@@ -84,7 +81,7 @@ class FedAVGAlgorithm(AggregationAlgorithm):
                     parameter[k] = (v / self.__total_weights[k]).to(
                         dtype=self.__dtypes[k]
                     )
-                self.__total_weights = None
+                self.__total_weights = {}
                 res = {"parameter": parameter}
 
         for worker_data in self._all_worker_data.values():
