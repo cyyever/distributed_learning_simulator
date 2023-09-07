@@ -15,13 +15,9 @@ class AggregationServer(Server):
     ) -> None:
         Server.__init__(self, *args, **kwargs)
         self._model_cache: ModelCache = ModelCache()
-        self._round_number = 1
-        self._send_parameter_path = False
+        self._round_number: int = 1
         self.__worker_flag: set = set()
         self.__algorithm: AggregationAlgorithm = algorithm
-        self.__init_global_model_path = self.config.algorithm_kwargs.get(
-            "global_model_path", None
-        )
 
     @property
     def algorithm(self):
@@ -31,17 +27,13 @@ class AggregationServer(Server):
     def round_number(self):
         return self._round_number
 
-    def _distribute_init_model(self):
-        with self._get_execution_context():
-            if self.config.distribute_init_parameters:
-                self.send_result(
-                    self.__algorithm.process_init_model(self.__get_init_model())
-                )
-
-    def __get_init_model(self) -> dict:
+    def _get_init_model(self) -> dict:
         parameter_dict: dict = {}
-        if self.__init_global_model_path is not None:
-            with open(os.path.join(self.__init_global_model_path), "rb") as f:
+        init_global_model_path = self.config.algorithm_kwargs.get(
+            "global_model_path", None
+        )
+        if init_global_model_path is not None:
+            with open(os.path.join(init_global_model_path), "rb") as f:
                 parameter_dict = pickle.load(f)
         else:
             parameter_dict = self.tester.model_util.get_parameter_dict()
@@ -49,9 +41,11 @@ class AggregationServer(Server):
             self.tester.offload_from_device()
         return parameter_dict
 
-    def start(self) -> None:
-        self._distribute_init_model()
-        super().start()
+    def _before_start(self) -> None:
+        if self.config.distribute_init_parameters:
+            self._send_result(
+                self.__algorithm.process_init_model(self._get_init_model())
+            )
 
     def _server_exit(self) -> None:
         self.__algorithm.exit()
@@ -62,13 +56,15 @@ class AggregationServer(Server):
         self.__algorithm.process_worker_data(
             worker_id=worker_id,
             worker_data=data,
-            save_dir=self.config.save_dir,
-            old_parameter_dict=self._model_cache.get_parameter_dict,
+            save_dir=self.config.get_save_dir(),
+            old_parameter_dict=self._model_cache.parameter_dict,
         )
         self.__worker_flag.add(worker_id)
         if len(self.__worker_flag) == self.worker_number:
             result = self._aggregate_worker_data()
             self._after_aggregate_worker_data(result)
+            self._send_result(result)
+            self.__worker_flag.clear()
         else:
             get_logger().debug(
                 "we have %s committed, and we need %s workers,skip",
@@ -80,24 +76,25 @@ class AggregationServer(Server):
         return self.__algorithm.aggregate_worker_data()
 
     def _after_aggregate_worker_data(self, result) -> None:
-        self.send_result(result)
         if "in_round_data" not in result:
             self._round_number += 1
-        self.__worker_flag.clear()
 
-    def send_result(self, result) -> None:
-        parameter = result.pop("parameter", None)
-        if parameter is not None:
-            model_path = os.path.join(
-                self.config.save_dir, "aggregated_model", f"round_{self.round_number}.pk"
-            )
-            self._model_cache.cache_parameter_dict(parameter, model_path)
-            if "partial_parameter" not in result:
-                if self._send_parameter_path:
-                    result["parameter_path"] = self._model_cache.get_parameter_path()
-                else:
-                    result["parameter"] = parameter
-        super().send_result(result)
+    def _before_send_result(self, result: dict) -> None:
+        parameter: dict | None = result.pop("parameter", None)
+        if parameter is None:
+            return
+        model_path = os.path.join(
+            self.config.save_dir,
+            "aggregated_model",
+            f"round_{self.round_number}.pk",
+        )
+        self._model_cache.cache_parameter_dict(parameter, model_path)
+        if "partial_parameter" in result:
+            return
+        if self.config.limited_resource:
+            result["parameter_path"] = self._model_cache.get_parameter_path()
+        else:
+            result["parameter"] = parameter
 
     def _stopped(self) -> bool:
         return self._round_number > self.config.round

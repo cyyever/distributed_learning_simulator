@@ -61,34 +61,47 @@ class FedAVGAlgorithm(AggregationAlgorithm):
         pass
 
     def aggregate_worker_data(self) -> dict:
-        res = {}
         if not self.accumulate:
-            if "parameter" in next(iter(self._all_worker_data.values())).data:
-                parameter = AggregationAlgorithm.weighted_avg(
-                    self._all_worker_data,
-                    AggregationAlgorithm.get_ratios(
-                        self._all_worker_data, key_name="dataset_size"
-                    ),
-                    key_name="parameter",
-                )
-                res = {"parameter": parameter}
-        else:
-            if self.__parameter:
-                parameter = self.__parameter
-                self.__parameter = {}
-                self._adjust_total_weights(self.__total_weights)
-                for k, v in parameter.items():
-                    parameter[k] = (v / self.__total_weights[k]).to(
-                        dtype=self.__dtypes[k]
-                    )
-                self.__total_weights = {}
-                res = {"parameter": parameter}
+            return self._aggregate_worker_data(self._all_worker_data)
+        res = {}
+        if self.__parameter:
+            parameter = self.__parameter
+            self.__parameter = {}
+            self._adjust_total_weights(self.__total_weights)
+            for k, v in parameter.items():
+                parameter[k] = (v / self.__total_weights[k]).to(dtype=self.__dtypes[k])
+            self.__total_weights = {}
+            res = {"parameter": parameter}
 
         for worker_data in self._all_worker_data.values():
             if worker_data is None:
                 continue
             for k, v in worker_data.data.items():
-                if k not in ["parameter", "dataset_size"]:
-                    res[k] = v
-            break
+                if k not in ["parameter", "dataset_size", "model_epoch"]:
+                    if k not in res:
+                        res[k] = v
+                    else:
+                        assert v == res[k]
+        return res
+
+    @classmethod
+    def _aggregate_worker_data(cls, all_worker_data: dict) -> dict:
+        res = {}
+        if "parameter" in next(iter(all_worker_data.values())).data:
+            parameter = AggregationAlgorithm.weighted_avg(
+                all_worker_data,
+                AggregationAlgorithm.get_ratios(
+                    all_worker_data, key_name="dataset_size"
+                ),
+                key_name="parameter",
+            )
+            res = {"parameter": parameter}
+
+        for worker_data in all_worker_data.values():
+            for k, v in worker_data.data.items():
+                if k not in ["parameter", "dataset_size", "model_epoch"]:
+                    if k not in res:
+                        res[k] = v
+                    else:
+                        assert v == res[k]
         return res

@@ -9,6 +9,7 @@ from cyy_torch_toolbox.ml_type import ExecutorHookPoint
 from cyy_torch_toolbox.trainer import Trainer
 from executor import Executor
 from practitioner import Practitioner
+from topology.cs_endpoint import ClientEndpoint
 
 
 def total_size(o, handlers={}):
@@ -66,6 +67,7 @@ class Worker(Executor):
         self,
         task_id: int,
         worker_id: int,
+        endpoint: ClientEndpoint,
         practitioner: Practitioner,
         **kwargs: Any,
     ) -> None:
@@ -75,6 +77,7 @@ class Worker(Executor):
         super().__init__(name=name, **kwargs)
         self.__worker_id = worker_id
         self.__practitioner: Practitioner = practitioner
+        self._endpoint = endpoint
         self._round_num = 0
         self._force_stop = False
 
@@ -94,8 +97,6 @@ class Worker(Executor):
         #     inferencer = self.trainer.get_cached_inferencer(phase=phase)
         #     if inferencer is not None:
         # #         inferencer.model_util.clear_parameters()
-        # if not hasattr(self, "_keep_optimizer"):
-        #     self.trainer.remove_optimizer()
         # print(total_size(self))
 
     def _before_training(self) -> None:

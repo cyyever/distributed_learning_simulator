@@ -1,37 +1,38 @@
 import copy
+import functools
+import os
+import pickle
 import random
 from typing import Any
 
 import gevent
 import gevent.lock
 from cyy_naive_lib.log import get_logger
-from cyy_torch_toolbox.executor import Executor as CentralizedExecutor
+from cyy_torch_toolbox.inferencer import Inferencer
 from cyy_torch_toolbox.ml_type import MachineLearningPhase
 from executor import Executor
+from topology.cs_endpoint import ServerEndpoint
 
 
 class Server(Executor):
-    def __init__(self, task_id: int, **kwargs: Any) -> None:
+    def __init__(self, task_id: int, endpoint: ServerEndpoint, **kwargs: Any) -> None:
         name: str = "server"
         if task_id is not None:
             name = f"server of {task_id}"
         super().__init__(**kwargs, name=name)
-        self.__tester: None | CentralizedExecutor = None
+        self._endpoint: ServerEndpoint = endpoint
 
     @property
-    def tester(self) -> CentralizedExecutor:
-        if self.__tester is None:
-            self.__tester = self.config.create_inferencer(
-                phase=MachineLearningPhase.Test
-            )
-            self.__tester.dataset_collection.remove_dataset(
-                phase=MachineLearningPhase.Training
-            )
-            self.__tester.dataset_collection.remove_dataset(
-                phase=MachineLearningPhase.Validation
-            )
-            self.__tester.disable_hook("logger")
-        return self.__tester
+    def worker_number(self) -> int:
+        return self.config.worker_number
+
+    @functools.cached_property
+    def tester(self) -> Inferencer:
+        tester = self.config.create_inferencer(phase=MachineLearningPhase.Test)
+        tester.dataset_collection.remove_dataset(phase=MachineLearningPhase.Training)
+        tester.dataset_collection.remove_dataset(phase=MachineLearningPhase.Validation)
+        tester.disable_hook("logger")
+        return tester
 
     def get_metric(
         self, parameter_dict: dict, keep_performance_logger: bool = True
@@ -46,7 +47,7 @@ class Server(Executor):
         else:
             self.tester.disable_hook("performance_metric_logger")
         self.tester.inference(epoch=1)
-        metric = {
+        metric: dict = {
             "acc": self.tester.performance_metric.get_accuracy(1),
             "loss": self.tester.performance_metric.get_loss(1).item(),
         }
@@ -55,6 +56,13 @@ class Server(Executor):
         return metric
 
     def start(self) -> None:
+        os.makedirs(self.config.save_dir, exist_ok=True)
+        with open(os.path.join(self.config.save_dir, "config.pkl"), "wb") as f:
+            pickle.dump(self.config, f)
+
+        with self._get_execution_context():
+            self._before_start()
+
         worker_set: set = set()
         while not self._stopped():
             if not worker_set:
@@ -76,17 +84,20 @@ class Server(Executor):
             get_logger().warning("end server")
             self._server_exit()
 
+    def _before_start(self) -> None:
+        pass
+
     def _server_exit(self) -> None:
         pass
 
-    def _process_worker_data(self, worker_id: int, data: Any):
+    def _process_worker_data(self, worker_id: int, data: Any) -> None:
         raise NotImplementedError()
 
-    @property
-    def worker_number(self) -> int:
-        return self.config.worker_number
+    def _before_send_result(self, result: dict) -> None:
+        pass
 
-    def send_result(self, result: dict) -> None:
+    def _send_result(self, result: dict) -> None:
+        self._before_send_result(result=result)
         if "worker_result" in result:
             for worker_id, data in result["worker_result"].items():
                 self._endpoint.send(worker_id=worker_id, data=data)

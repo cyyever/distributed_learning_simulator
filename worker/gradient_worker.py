@@ -86,7 +86,9 @@ class GradientWorker(Client):
             self.send_data_to_server(
                 {"dataset_size": self.trainer.dataset_size, "gradient": gradient}
             )
-            gradient = self._get_result_from_server()["gradient"]
+            result = self._get_data_from_server()
+            assert result is not None
+            gradient = result["gradient"]
             gradient_list = decompose_tensor_to_list(
                 shapes=gradient_shape, tensor=gradient
             )

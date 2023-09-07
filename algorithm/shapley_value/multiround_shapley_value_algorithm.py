@@ -1,8 +1,9 @@
-from algorithm.fed_avg_algorithm import FedAVGAlgorithm
 from cyy_torch_algorithm.shapely_value.multiround_shapley_value import \
     MultiRoundShapleyValue
 
+from .shapley_value_algorithm import ShapleyValueAlgorithm
 
-class MultiRoundShapleyValueAlgorithm(FedAVGAlgorithm):
-    def __init__(self, *args, **kwargs):
+
+class MultiRoundShapleyValueAlgorithm(ShapleyValueAlgorithm):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(MultiRoundShapleyValue, *args, **kwargs)

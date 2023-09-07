@@ -1,4 +1,3 @@
-import os
 from typing import TypeAlias
 
 import torch
@@ -13,7 +12,7 @@ class ModelCache:
         self.__parameter_dict: DataStorage = DataStorage()
 
     @property
-    def get_parameter_dict(self) -> ParameterDictType:
+    def parameter_dict(self) -> ParameterDictType:
         return self.__parameter_dict.data
 
     def load_file(self, path: str) -> None:
@@ -32,15 +31,15 @@ class ModelCache:
         self, new_parameter_dict: ParameterDictType
     ) -> ParameterDictType:
         return {
-            k: tensor_to(v, device="cpu") - self.get_parameter_dict[k]
+            k: tensor_to(v, device="cpu") - self.parameter_dict[k]
             for k, v in new_parameter_dict.items()
         }
 
     def add_parameter_diff(self, parameter_diff: ParameterDictType, path: str) -> None:
         self.__parameter_dict.save()
         self.__parameter_dict.set_data_path(path)
-        for k, v in self.get_parameter_dict.items():
-            self.get_parameter_dict[k] = v + tensor_to(parameter_diff[k], device="cpu")
+        for k, v in self.parameter_dict.items():
+            self.parameter_dict[k] = v + tensor_to(parameter_diff[k], device="cpu")
         self.__parameter_dict.mark_new_data()
 
     def save(self) -> None:
@@ -48,4 +47,5 @@ class ModelCache:
 
     def get_parameter_path(self) -> str:
         self.__parameter_dict.save()
+        assert self.__parameter_dict.data_path
         return self.__parameter_dict.data_path

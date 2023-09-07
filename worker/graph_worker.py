@@ -1,5 +1,4 @@
 import functools
-import math
 from typing import Any
 
 import torch
@@ -18,11 +17,7 @@ class GraphWorker(FedAVGWorker):
         assert not self.config.trainer_config.hook_config.use_amp
         self._share_feature = self.config.algorithm_kwargs.get("share_feature", True)
         self._other_training_node_indices: set = set()
-        self.__edge_drop_rate: float | None = self.config.algorithm_kwargs.get(
-            "edge_drop_rate", None
-        )
         self.__old_edge_index = None
-        self.__local_set_mask = None
         self.__n_id = None
 
     def __get_edge_index(self) -> torch.Tensor:
@@ -39,14 +34,9 @@ class GraphWorker(FedAVGWorker):
         return torch_geometric.utils.coalesce(edge_index[:, edge_mask])
 
     def __get_local_edge_mask(self, edge_index) -> torch.Tensor:
-        if self.__local_set_mask is None:
-            self.__local_set_mask = self.training_set_mask | self.validation_set_mask
-        self.__local_set_mask = tensor_to(
-            self.__local_set_mask, device=edge_index.device
-        )
-        edge_mask = (
-            self.__local_set_mask[edge_index[0]] & self.__local_set_mask[edge_index[1]]
-        )
+        local_set_mask = self.training_set_mask | self.validation_set_mask
+        local_set_mask = tensor_to(local_set_mask, device=edge_index.device)
+        edge_mask = local_set_mask[edge_index[0]] & local_set_mask[edge_index[1]]
         return edge_mask
 
     def __exchange_training_node_indices(self) -> None:
@@ -55,7 +45,8 @@ class GraphWorker(FedAVGWorker):
             "in_round_data": True,
         }
         self.send_data_to_server(sent_data)
-        res = self._get_result_from_server()
+        res = self._get_data_from_server()
+        assert res is not None
         for worker_id, node_indices in res["training_node_indices"].items():
             if worker_id != self.worker_id:
                 self._other_training_node_indices |= node_indices
@@ -69,15 +60,24 @@ class GraphWorker(FedAVGWorker):
         self.__exchange_training_node_indices()
         self.__clear_unrelated_edges()
 
-        dataset_size = len(self.training_node_indices)
-        self._determin_batch_size(dataset_size)
+        self._determin_batch_size()
         if not self._share_feature:
             self._clear_cross_device_edges()
         else:
-            input_nodes: torch.Tensor = self.__get_edge_index().view(-1).unique()
-            self._determin_batch_size(input_nodes.numel())
-            self.trainer.hyper_parameter.extra_parameters[
-                "pyg_input_nodes"
+            input_nodes = torch.tensor(
+                list(
+                    set(self.__get_edge_index().view(-1).unique().tolist())
+                    - set(
+                        torch_geometric.utils.mask_to_index(
+                            self.validation_set_mask
+                        ).tolist()
+                    )
+                ),
+                dtype=torch.long,
+            )
+            self.trainer.hyper_parameter.extra_parameters["pyg_input_nodes"] = {}
+            self.trainer.hyper_parameter.extra_parameters["pyg_input_nodes"][
+                MachineLearningPhase.Training
             ] = input_nodes
 
             first_message_layer: bool = True
@@ -126,22 +126,17 @@ class GraphWorker(FedAVGWorker):
         return set(torch_geometric.utils.mask_to_index(self.training_set_mask).tolist())
 
     @functools.cached_property
-    def training_node_boundary(self) -> dict:
+    def training_node_boundary(self) -> set:
         assert self._other_training_node_indices
         edge_index = self.__get_edge_index()
         edge_mask = self.training_set_mask[edge_index[0]]
         edge_index = edge_index[:, edge_mask]
-        worker_boundary = {idx: set() for idx in self.training_node_indices}
+        worker_boundary = set()
         for a, b in edge_index.transpose(0, 1).numpy():
-            if a in worker_boundary:
-                worker_boundary[a].add(b)
+            if b in self._other_training_node_indices:
+                worker_boundary.add(a)
 
-        worker_boundary = {
-            k: v - self._other_training_node_indices for k, v in worker_boundary.items()
-        }
-        self._other_training_node_indices.clear()
-
-        worker_boundary = {k: v for k, v in worker_boundary.items() if v}
+        assert worker_boundary
         return worker_boundary
 
     def __clear_unrelated_edges(self) -> None:
@@ -152,9 +147,12 @@ class GraphWorker(FedAVGWorker):
             self.training_set_mask[edge_index[0]]
             & self.training_set_mask[edge_index[1]]
         )
-        if self.__edge_drop_rate:
+        edge_drop_rate: float | None = self.config.algorithm_kwargs.get(
+            "edge_drop_rate", None
+        )
+        if edge_drop_rate is not None:
             dropout_mask = torch.bernoulli(
-                torch.full(in_client_edge_mask.size(), 1 - self.__edge_drop_rate)
+                torch.full(in_client_edge_mask.size(), 1 - edge_drop_rate)
             ).to(dtype=torch.bool)
             in_client_edge_mask &= dropout_mask
 
@@ -168,6 +166,10 @@ class GraphWorker(FedAVGWorker):
         validation_edge_mask = (
             self.validation_set_mask[edge_index[0]]
             & self.validation_set_mask[edge_index[1]]
+        )
+        get_logger().warning(
+            "cross_device_edge/in_client_edge %s",
+            cross_device_edge_mask.sum().item() / in_client_edge_mask.sum().item(),
         )
         joint_mask = in_client_edge_mask | cross_device_edge_mask | validation_edge_mask
         edge_index = torch_geometric.utils.coalesce(edge_index[:, joint_mask])
@@ -205,14 +207,14 @@ class GraphWorker(FedAVGWorker):
         indices = []
         node_indices = []
         for idx, node_index in enumerate(self.__n_id.tolist()):
-            if node_index in self.training_node_indices:
+            if node_index in self.training_node_boundary:
                 indices.append(idx)
                 node_indices.append(node_index)
         assert indices
         indices = torch.tensor(indices, device=x.device)
         return torch.index_select(x, 0, indices).detach().cpu(), node_indices
 
-    def __get_cross_deivce_embedding(
+    def _get_cross_deivce_embedding(
         self, embedding_indices, embedding, x
     ) -> torch.Tensor:
         new_x = torch.zeros_like(x)
@@ -261,21 +263,16 @@ class GraphWorker(FedAVGWorker):
             "in_round_data": True,
         }
         self.send_data_to_server(sent_data)
-        res = self._get_result_from_server()
+        res = self._get_data_from_server()
+        assert res is not None
 
-        new_x = self.__get_cross_deivce_embedding(
+        new_x = self._get_cross_deivce_embedding(
             res["node_indices"], res["node_embedding"], x
         )
         self.__n_id = None
         return (new_x, self.__old_edge_index, *args[2:]), kwargs
 
-    def _determin_batch_size(self, dataset_size):
-        batch_number = self.config.algorithm_kwargs["batch_number"]
-        self.trainer.hyper_parameter.batch_size = math.ceil(dataset_size / batch_number)
-        assert self.trainer.hyper_parameter.batch_size > 0
-        assert (
-            self.trainer.hyper_parameter.get_iterations_per_epoch(
-                dataset_size=dataset_size
-            )
-            == batch_number
-        )
+    def _determin_batch_size(self):
+        self.trainer.hyper_parameter.extra_parameters[
+            "batch_number"
+        ] = self.config.algorithm_kwargs["batch_number"]

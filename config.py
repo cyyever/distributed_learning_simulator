@@ -5,11 +5,11 @@ from typing import Any
 
 import hydra
 import omegaconf
-from cyy_torch_toolbox.default_config import DefaultConfig
+from cyy_torch_toolbox.default_config import Config
 from cyy_torch_toolbox.device import get_devices
 
 
-class DistributedTrainingConfig(DefaultConfig):
+class DistributedTrainingConfig(Config):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.distributed_algorithm: str = ""
@@ -22,6 +22,7 @@ class DistributedTrainingConfig(DefaultConfig):
         self.server_send_file: bool = False
         self.log_file: None | str = None
         self.offload_device: bool = False
+        self.limited_resource: bool = False
         self.endpoint_kwargs: dict = {}
         self.algorithm_kwargs: dict = {}
         self.frozen_modules: list = []
@@ -72,6 +73,7 @@ def load_config(conf) -> None:
 def load_config_from_file(
     config_file: None | str = None,
 ) -> DistributedTrainingConfig:
+    assert config_file is not None
     conf = omegaconf.OmegaConf.load(config_file)
     __load_config(conf)
     return global_config

@@ -112,7 +112,7 @@ class OpportunisticBlockDropoutAlgorithm:
         for mean_delta in sorted(block_delta.keys(), reverse=True):
             if partial_parameter_num > threshold:
                 break
-            for (block_dict, block_size) in block_delta[mean_delta]:
+            for block_dict, block_size in block_delta[mean_delta]:
                 if partial_parameter_num + block_size > threshold:
                     continue
                 partial_parameter_num += block_size
@@ -135,9 +135,7 @@ class OpportunisticBlockDropoutAlgorithm:
             for p_name, _ in submodule.named_parameters():
                 parameter_name = submodule_name + "." + p_name
                 cur_block_parameters.append(parameter_dict[parameter_name])
-                prev_block_parameters.append(
-                    model_cache.get_parameter_dict[parameter_name]
-                )
+                prev_block_parameters.append(model_cache.parameter_dict[parameter_name])
                 block_dict[parameter_name] = parameter_dict[parameter_name]
 
         cur_block_parameter = cat_tensors_to_vector(cur_block_parameters)

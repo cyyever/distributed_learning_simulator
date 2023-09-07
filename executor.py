@@ -44,12 +44,10 @@ class Executor:
     def __init__(
         self,
         config: DistributedTrainingConfig,
-        endpoint: Endpoint,
         name: str,
         device_lock: threading.RLock,
     ) -> None:
         self.config: DistributedTrainingConfig = copy.deepcopy(config)
-        self._endpoint: Endpoint = endpoint
         self.__used_device_memory = None
         self.__name = name
         self.__device_lock: threading.RLock = device_lock

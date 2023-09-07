@@ -28,9 +28,9 @@ class FedOBDWorker(FedAVGWorker, OpportunisticBlockDropoutAlgorithm):
             self._reuse_learning_rate = True
             self._send_parameter_diff = True
             self._choose_model_by_validation = False
-            self.trainer.hyper_parameter.set_epoch(
-                self.config.algorithm_kwargs["second_phase_epoch"]
-            )
+            self.trainer.hyper_parameter.epoch = self.config.algorithm_kwargs[
+                "second_phase_epoch"
+            ]
             self.config.round = self._round_num + 1
             get_logger().warning(
                 "change epoch to %s", self.trainer.hyper_parameter.epoch
@@ -44,13 +44,12 @@ class FedOBDWorker(FedAVGWorker, OpportunisticBlockDropoutAlgorithm):
 
         super()._load_result_from_server(result=result)
 
-    def _should_aggregate(self, **kwargs):
-        if self.__phase != Phase.STAGE_TWO:
-            return True
-        executor = kwargs["executor"]
-        if kwargs["epoch"] == executor.hyper_parameter.epoch:
-            self.__end_training = True
-        return True
+    def _aggregation(self, sent_data, **kwargs):
+        if self.__phase == Phase.STAGE_TWO:
+            executor = kwargs["executor"]
+            if kwargs["epoch"] == executor.hyper_parameter.epoch:
+                self.__end_training = True
+        super()._aggregation(sent_data=sent_data, **kwargs)
 
     def _stopped(self) -> bool:
         return self.__end_training

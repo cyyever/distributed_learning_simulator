@@ -1,6 +1,4 @@
-import torch.nn as nn
 from cyy_naive_lib.log import get_logger
-from cyy_torch_toolbox.model_util import ModelUtil
 from cyy_torch_toolbox.trainer import Trainer
 
 
@@ -22,5 +20,3 @@ def load_parameters(
     else:
         trainer.load_parameter_dict(parameter_dict)
     trainer.model_util.disable_running_stats()
-
-

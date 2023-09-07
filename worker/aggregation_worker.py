@@ -27,16 +27,10 @@ class AggregationWorker(Client):
             self.__aggregation_impl,
         )
 
-    def _should_aggregate(self, **kwargs) -> True:
-        return True
-
     def __aggregation_impl(self, **kwargs) -> None:
-        if not self._should_aggregate(**kwargs):
-            return
-        sent_data = self._get_sent_data()
-        self._aggregation(sent_data=sent_data)
+        self._aggregation(sent_data=self._get_sent_data(), **kwargs)
 
-    def _aggregation(self, sent_data):
+    def _aggregation(self, sent_data, **kwargs) -> None:
         raise NotImplementedError()
 
     def _get_sent_data(self) -> dict:
@@ -59,7 +53,7 @@ class AggregationWorker(Client):
             sent_data["parameter"] = parameter
         return sent_data
 
-    def _load_result_from_server(self, result):
+    def _load_result_from_server(self, result: dict) -> None:
         if "end_training" in result:
             self._force_stop = True
             raise StopExecutingException()
@@ -82,6 +76,6 @@ class AggregationWorker(Client):
             raise NotImplementedError()
         load_parameters(
             trainer=self.trainer,
-            parameter_dict=self._model_cache.get_parameter_dict,
+            parameter_dict=self._model_cache.parameter_dict,
             reuse_learning_rate=self._reuse_learning_rate,
         )

@@ -10,7 +10,7 @@ class Client(Worker):
     def send_data_to_server(self, data: Any) -> None:
         self._endpoint.send(data)
 
-    def _get_result_from_server(self) -> dict:
+    def _get_data_from_server(self) -> dict | None:
         ExecutorContext.local_data.ctx.release()
         self._release_device_lock()
         while True:
