@@ -11,6 +11,8 @@ epoch: 5
 learning_rate: 0.01
 dataset_kwargs:
   max_len: 300
+  tokenizer:
+    type: spacy
 model_kwargs:
   max_len: 300
   word_vector_name: glove.6B.100d
