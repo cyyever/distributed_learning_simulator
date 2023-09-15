@@ -1,6 +1,7 @@
 from typing import Any
 
 import torch
+from cyy_naive_lib.log import get_logger
 from cyy_naive_lib.storage import DataStorage
 
 from .aggregation_algorithm import AggregationAlgorithm
@@ -81,13 +82,14 @@ class FedAVGAlgorithm(AggregationAlgorithm):
                     if k not in res:
                         res[k] = v
                     else:
+                        get_logger().error(v, res[k], k)
                         assert v == res[k]
         return res
 
     @classmethod
     def _aggregate_worker_data(cls, all_worker_data: dict) -> dict:
         res = {}
-        if "parameter" in next(iter(all_worker_data.values())).data:
+        if "parameter" in next(iter(all_worker_data.values())):
             parameter = AggregationAlgorithm.weighted_avg(
                 all_worker_data,
                 AggregationAlgorithm.get_ratios(
@@ -98,10 +100,14 @@ class FedAVGAlgorithm(AggregationAlgorithm):
             res = {"parameter": parameter}
 
         for worker_data in all_worker_data.values():
+            if not hasattr(worker_data, "data"):
+                break
             for k, v in worker_data.data.items():
                 if k not in ["parameter", "dataset_size", "model_epoch"]:
                     if k not in res:
                         res[k] = v
                     else:
+                        if v != res[k]:
+                            get_logger().error("different values on key %s", k)
                         assert v == res[k]
         return res

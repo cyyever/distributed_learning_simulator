@@ -28,7 +28,7 @@ class GraphNodeEmbeddingPassingAlgorithm(FedAVGAlgorithm):
         worker_data = self._all_worker_data[worker_id].data
         if worker_data is None:
             return
-        node_embedding = worker_data.pop("node_embedding", None)
+        node_embedding: None | tuple = worker_data.pop("node_embedding", None)
         if node_embedding is not None:
             node_embedding, node_indices = node_embedding
             for tensor_idx, node_idx in enumerate(node_indices):
@@ -45,15 +45,12 @@ class GraphNodeEmbeddingPassingAlgorithm(FedAVGAlgorithm):
         return self.__node_embeddings[list_idx][tensor_idx]
 
     def aggregate_worker_data(self) -> dict:
-        res = super().aggregate_worker_data()
-        if "training_node_indices" in res:
-            res["training_node_indices"] = {}
+        if "training_node_indices" in next(iter(self._all_worker_data.values())):
+            training_node_indices = {}
             for worker_id, worker_data in self._all_worker_data.items():
-                worker_data = worker_data.data
-                if "training_node_indices" in worker_data:
-                    res["training_node_indices"][worker_id] = worker_data[
-                        "training_node_indices"
-                    ]
+                training_node_indices[worker_id] = worker_data["training_node_indices"]
+            return {"training_node_indices": training_node_indices}
+        res = super().aggregate_worker_data()
 
         if self.__node_embeddings:
             res["worker_result"] = {}

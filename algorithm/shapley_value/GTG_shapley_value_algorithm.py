@@ -4,5 +4,5 @@ from .shapley_value_algorithm import ShapleyValueAlgorithm
 
 
 class GTGShapleyValueAlgorithm(ShapleyValueAlgorithm):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(GTGShapleyValue, *args, **kwargs)

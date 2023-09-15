@@ -16,9 +16,9 @@ class AggregationAlgorithm:
 
     @classmethod
     def get_ratios(cls, data_dict: dict, key_name: str) -> dict:
-        total_scalar = sum(v.data[key_name] for v in data_dict.values())
+        total_scalar = sum(v[key_name] for v in data_dict.values())
         return {
-            k: float(v.data[key_name]) / float(total_scalar)
+            k: float(v[key_name]) / float(total_scalar)
             for k, v in data_dict.items()
         }
 
@@ -28,7 +28,7 @@ class AggregationAlgorithm:
         for k, v in data_dict.items():
             ratio = weight_dict[k]
             assert 0 <= ratio <= 1
-            d = v.data[key_name]
+            d = v[key_name]
 
             match d:
                 case dict():
