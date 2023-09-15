@@ -18,7 +18,7 @@ class GraphWorker(FedAVGWorker):
         self._share_feature = self.config.algorithm_kwargs.get("share_feature", True)
         self._other_training_node_indices: set = set()
         self.__old_edge_index = None
-        self.__n_id = None
+        self.__n_id: None | torch.Tensor = None
 
     def __get_edge_index(self) -> torch.Tensor:
         return self.trainer.dataset_collection.get_dataset_util(
@@ -139,6 +139,11 @@ class GraphWorker(FedAVGWorker):
         assert worker_boundary
         return worker_boundary
 
+    @property
+    def n_id(self) -> torch.Tensor:
+        assert self.__n_id is not None
+        return self.__n_id
+
     def __clear_unrelated_edges(self) -> None:
         assert self._other_training_node_indices
         # Keep in-device edges and cross-device edges
@@ -193,7 +198,7 @@ class GraphWorker(FedAVGWorker):
         if not module.training:
             return None
         self.__old_edge_index = args[1]
-        edge_index = self.__n_id[self.__old_edge_index]
+        edge_index = self.n_id[self.__old_edge_index]
         edge_mask = self.__get_local_edge_mask(edge_index=edge_index)
         args = list(args)
         args[1] = args[1][:, edge_mask]
@@ -201,18 +206,21 @@ class GraphWorker(FedAVGWorker):
 
     def training_boundary_feature(self, x) -> tuple:
         assert len(self.training_node_boundary) <= len(self.training_node_indices)
-        assert self.__n_id is not None
 
-        assert x.shape[0] == self.__n_id.shape[0]
-        indices = []
+        assert x.shape[0] == self.n_id.shape[0]
+        indices: list = []
         node_indices = []
-        for idx, node_index in enumerate(self.__n_id.tolist()):
+        for idx, node_index in enumerate(self.n_id.tolist()):
             if node_index in self.training_node_boundary:
                 indices.append(idx)
                 node_indices.append(node_index)
         assert indices
-        indices = torch.tensor(indices, device=x.device)
-        return torch.index_select(x, 0, indices).detach().cpu(), node_indices
+        return (
+            torch.index_select(x, 0, torch.tensor(indices, device=x.device))
+            .detach()
+            .cpu(),
+            node_indices,
+        )
 
     def _get_cross_deivce_embedding(
         self, embedding_indices, embedding, x
@@ -224,7 +232,7 @@ class GraphWorker(FedAVGWorker):
 
         embedding_indices = {b: a for a, b in enumerate(embedding_indices)}
 
-        for idx, node_idx in enumerate(self.__n_id.tolist()):
+        for idx, node_idx in enumerate(self.n_id.tolist()):
             if node_idx not in self.training_node_indices:
                 if node_idx in embedding_indices:
                     assert node_idx not in self.training_node_indices
@@ -256,6 +264,7 @@ class GraphWorker(FedAVGWorker):
         self.trainer.wait_stream()
 
         x = args[0]
+        assert self.__n_id is not None
 
         sent_data = {
             "node_embedding": self.training_boundary_feature(x),

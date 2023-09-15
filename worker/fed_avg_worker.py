@@ -1,3 +1,5 @@
+from typing import Any
+
 from cyy_naive_lib.log import get_logger
 from cyy_torch_toolbox.ml_type import MachineLearningPhase
 
@@ -36,7 +38,7 @@ class FedAVGWorker(AggregationWorker):
             return True
         return False
 
-    def _aggregation(self, sent_data, **kwargs) -> None:
+    def _aggregation(self, sent_data: dict, **kwargs: Any) -> None:
         self.send_data_to_server(sent_data)
         self._offload_from_device()
         self.__get_result_from_server()

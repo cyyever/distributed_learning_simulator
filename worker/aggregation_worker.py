@@ -37,14 +37,12 @@ class AggregationWorker(Client):
         sent_data: dict[str, Any] = {
             "dataset_size": self.trainer.dataset_size,
         }
-        model_util = self.trainer.model_util
         if self._choose_model_by_validation:
             get_logger().debug("use best model")
             assert self.trainer.best_model is not None
-            parameter = self.trainer.best_model
-            sent_data["model_epoch"] = self.trainer.best_epoch
+            parameter = self.trainer.best_model["parameter"]
         else:
-            parameter = model_util.get_parameter_dict()
+            parameter = self.trainer.model_util.get_parameter_dict()
         if self._send_parameter_diff:
             sent_data["parameter_diff"] = self._model_cache.get_parameter_diff(
                 parameter

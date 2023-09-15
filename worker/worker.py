@@ -1,65 +1,12 @@
 from functools import cached_property
-from itertools import chain
-from sys import getsizeof
 from typing import Any
 
-import torch
 from cyy_naive_lib.log import get_logger
 from cyy_torch_toolbox.ml_type import ExecutorHookPoint
 from cyy_torch_toolbox.trainer import Trainer
 from executor import Executor
 from practitioner import Practitioner
 from topology.cs_endpoint import ClientEndpoint
-
-
-def total_size(o, handlers={}):
-    """Returns the approximate memory footprint an object and all of its contents.
-
-    Automatically finds the contents of the following builtin containers and
-    their subclasses:  tuple, list, deque, dict, set and frozenset.
-    To search other containers, add handlers to iterate over their contents:
-
-        handlers = {SomeContainerClass: iter,
-                    OtherContainerClass: OtherContainerClass.get_elements}
-
-    """
-
-    def dict_handler(d):
-        return chain.from_iterable(d.items())
-
-    all_handlers = {
-        tuple: iter,
-        list: iter,
-        dict: dict_handler,
-        set: iter,
-        frozenset: iter,
-    }
-    all_handlers.update(handlers)  # user handlers take precedence
-    seen = set()  # track which object id's have already been seen
-    default_size = getsizeof(0)  # estimate sizeof object without __sizeof__
-
-    def sizeof(o):
-        if id(o) in seen:  # do not double count the same object
-            return 0
-        seen.add(id(o))
-        s = getsizeof(o, default_size)
-        if isinstance(o, float | int | bool | str):
-            return s
-        if isinstance(o, torch.Tensor):
-            return o.element_size() * o.nelement()
-        for attr in dir(o):
-            if attr.startswith("__"):
-                continue
-            if hasattr(o, attr):
-                value = getattr(o, attr)
-                if hasattr(value, "__call__"):
-                    continue
-                # print("attr is", attr, type(value))
-                s += sizeof(value)
-
-        return s
-
-    return sizeof(o)
 
 
 class Worker(Executor):
@@ -87,11 +34,15 @@ class Worker(Executor):
 
     @cached_property
     def trainer(self) -> Trainer:
+        return self.new_trainer()
+
+    def new_trainer(self) -> Trainer:
         return self.__practitioner.create_trainer(self.config)
 
     def _offload_from_device(self) -> None:
         self.trainer.offload_from_device()
-        self.trainer.get_hook("keep_model_hook").clear()
+        if self.trainer.has_hook_obj("keep_model_hook"):
+            self.trainer.get_hook("keep_model_hook").clear()
         # self.trainer.model_util.clear_parameters()
         # for phase in MachineLearningPhase:
         #     inferencer = self.trainer.get_cached_inferencer(phase=phase)
@@ -119,7 +70,7 @@ class Worker(Executor):
                     if self._stopped():
                         break
                     self.trainer.set_device(
-                        self._get_device(
+                        device=self._get_device(
                             lock_callback=lambda: self.trainer.append_named_hook(
                                 ExecutorHookPoint.AFTER_BATCH,
                                 "release_device_lock",
@@ -129,7 +80,7 @@ class Worker(Executor):
                     )
                 else:
                     self.trainer.disable_hook("logger")
-                self.trainer.set_visualizer_prefix(f"round: {self._round_num},")
+                self.trainer.set_visualizer_prefix(prefix=f"round: {self._round_num},")
                 self.trainer.train(
                     keep_best_model=True,
                     batch_loss_log_times=None if self.config.log_batch_loss else 0,

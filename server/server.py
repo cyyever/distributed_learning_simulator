@@ -49,7 +49,7 @@ class Server(Executor):
         self.tester.inference(epoch=1)
         metric: dict = {
             "acc": self.tester.performance_metric.get_accuracy(1),
-            "loss": self.tester.performance_metric.get_loss(1).item(),
+            "loss": self.tester.performance_metric.get_loss(1),
         }
         self._release_device_lock()
         self.tester.offload_from_device()
