@@ -64,7 +64,7 @@ class FedAVGAlgorithm(AggregationAlgorithm):
     def aggregate_worker_data(self) -> dict:
         if not self.accumulate:
             return self._aggregate_worker_data(self._all_worker_data)
-        res = {}
+        res: dict = {}
         if self.__parameter:
             parameter = self.__parameter
             self.__parameter = {}
@@ -73,22 +73,12 @@ class FedAVGAlgorithm(AggregationAlgorithm):
                 parameter[k] = (v / self.__total_weights[k]).to(dtype=self.__dtypes[k])
             self.__total_weights = {}
             res = {"parameter": parameter}
-
-        for worker_data in self._all_worker_data.values():
-            if worker_data is None:
-                continue
-            for k, v in worker_data.data.items():
-                if k not in ["parameter", "dataset_size", "model_epoch"]:
-                    if k not in res:
-                        res[k] = v
-                    else:
-                        get_logger().error(v, res[k], k)
-                        assert v == res[k]
+        self.__merge_result(all_worker_data=self._all_worker_data, result=res)
         return res
 
     @classmethod
     def _aggregate_worker_data(cls, all_worker_data: dict) -> dict:
-        res = {}
+        result = {}
         if "parameter" in next(iter(all_worker_data.values())):
             parameter = AggregationAlgorithm.weighted_avg(
                 all_worker_data,
@@ -97,17 +87,23 @@ class FedAVGAlgorithm(AggregationAlgorithm):
                 ),
                 key_name="parameter",
             )
-            res = {"parameter": parameter}
+            result = {"parameter": parameter}
+        cls.__merge_result(all_worker_data=all_worker_data, result=result)
+        return result
 
+    @classmethod
+    def __merge_result(cls, all_worker_data: dict, result: dict) -> None:
         for worker_data in all_worker_data.values():
             if not hasattr(worker_data, "data"):
                 break
             for k, v in worker_data.data.items():
-                if k not in ["parameter", "dataset_size", "model_epoch"]:
-                    if k not in res:
-                        res[k] = v
-                    else:
-                        if v != res[k]:
-                            get_logger().error("different values on key %s", k)
-                        assert v == res[k]
-        return res
+                if k not in ["parameter", "dataset_size"]:
+                    if k not in result:
+                        result[k] = v
+                        continue
+                    try:
+                        if v != result[k]:
+                            raise RuntimeError(f"different values on key {k}")
+                    except BaseException as exc:
+                        get_logger().error("different values on key %s", k)
+                        raise exc

@@ -18,8 +18,7 @@ class AggregationAlgorithm:
     def get_ratios(cls, data_dict: dict, key_name: str) -> dict:
         total_scalar = sum(v[key_name] for v in data_dict.values())
         return {
-            k: float(v[key_name]) / float(total_scalar)
-            for k, v in data_dict.items()
+            k: float(v[key_name]) / float(total_scalar) for k, v in data_dict.items()
         }
 
     @classmethod
@@ -70,7 +69,7 @@ class AggregationAlgorithm:
     def process_worker_data(
         self,
         worker_id,
-        worker_data: dict[str, DataStorage],
+        worker_data: dict[str, Any],
         old_parameter_dict: dict | None,
         save_dir: str,
     ) -> None:
@@ -89,6 +88,11 @@ class AggregationAlgorithm:
 
     def aggregate_worker_data(self) -> dict:
         raise NotImplementedError()
+
+    def clear_worker_data(self) -> None:
+        for v in self._all_worker_data.values():
+            v.clear()
+        self._all_worker_data.clear()
 
     def exit(self) -> None:
         pass

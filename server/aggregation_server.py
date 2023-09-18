@@ -50,7 +50,7 @@ class AggregationServer(Server):
     def _server_exit(self) -> None:
         self.__algorithm.exit()
 
-    def _process_worker_data(self, worker_id, data):
+    def _process_worker_data(self, worker_id: int, data: dict[str, Any]) -> None:
         assert 0 <= worker_id < self.worker_number
         get_logger().debug("get data %s from worker %s", data, worker_id)
         self.__algorithm.process_worker_data(
@@ -75,9 +75,10 @@ class AggregationServer(Server):
     def _aggregate_worker_data(self) -> dict:
         return self.__algorithm.aggregate_worker_data()
 
-    def _after_aggregate_worker_data(self, result) -> None:
+    def _after_aggregate_worker_data(self, result: dict) -> None:
         if "in_round_data" not in result:
             self._round_number += 1
+        self.__algorithm.clear_worker_data()
 
     def _before_send_result(self, result: dict) -> None:
         parameter: dict | None = result.pop("parameter", None)
