@@ -96,6 +96,9 @@ class Server(Executor):
     def _before_send_result(self, result: dict) -> None:
         pass
 
+    def _after_send_result(self, result: dict) -> None:
+        pass
+
     def _send_result(self, result: dict) -> None:
         self._before_send_result(result=result)
         if "worker_result" in result:
@@ -110,6 +113,7 @@ class Server(Executor):
         unselected_workers = set(range(self.worker_number)) - selected_workers
         if unselected_workers:
             self._endpoint.broadcast(data=None, worker_ids=unselected_workers)
+        self._after_send_result(result=result)
 
     def _select_workers(self) -> set:
         if "random_client_number" in self.config.algorithm_kwargs:

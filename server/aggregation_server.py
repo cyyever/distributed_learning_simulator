@@ -62,7 +62,6 @@ class AggregationServer(Server):
         self.__worker_flag.add(worker_id)
         if len(self.__worker_flag) == self.worker_number:
             result = self._aggregate_worker_data()
-            self._after_aggregate_worker_data(result)
             self._send_result(result)
             self.__worker_flag.clear()
         else:
@@ -74,11 +73,6 @@ class AggregationServer(Server):
 
     def _aggregate_worker_data(self) -> dict:
         return self.__algorithm.aggregate_worker_data()
-
-    def _after_aggregate_worker_data(self, result: dict) -> None:
-        if "in_round_data" not in result:
-            self._round_number += 1
-        self.__algorithm.clear_worker_data()
 
     def _before_send_result(self, result: dict) -> None:
         parameter: dict | None = result.pop("parameter", None)
@@ -96,6 +90,12 @@ class AggregationServer(Server):
             result["parameter_path"] = self._model_cache.get_parameter_path()
         else:
             result["parameter"] = parameter
+
+    def _after_send_result(self, result: dict) -> None:
+        if "in_round_data" not in result and "init_parameter" not in result:
+            self._round_number += 1
+            print("add round number", self._round_number)
+        self.__algorithm.clear_worker_data()
 
     def _stopped(self) -> bool:
         return self._round_number > self.config.round

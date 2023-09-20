@@ -12,7 +12,7 @@ class AggregationAlgorithm:
         self._all_worker_data: dict = {}
 
     def process_init_model(self, parameter_dict):
-        return {"parameter": parameter_dict}
+        return {"parameter": parameter_dict,"init_parameter":True}
 
     @classmethod
     def get_ratios(cls, data_dict: dict, key_name: str) -> dict:

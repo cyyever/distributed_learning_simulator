@@ -178,10 +178,11 @@ class GraphWorker(FedAVGWorker):
             self.validation_node_mask[edge_index[0]]
             & self.validation_node_mask[edge_index[1]]
         )
-        get_logger().warning(
-            "cross_device_edge/in_client_edge %s",
-            cross_device_edge_mask.sum().item() / in_client_edge_mask.sum().item(),
-        )
+        if in_client_edge_mask.sum().item() != 0:
+            get_logger().warning(
+                "cross_device_edge/in_client_edge %s",
+                cross_device_edge_mask.sum().item() / in_client_edge_mask.sum().item(),
+            )
         joint_mask = in_client_edge_mask | cross_device_edge_mask | validation_edge_mask
         edge_index = torch_geometric.utils.coalesce(edge_index[:, joint_mask])
         self.trainer.transform_dataset(

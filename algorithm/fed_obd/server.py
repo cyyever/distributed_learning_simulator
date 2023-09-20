@@ -24,7 +24,8 @@ class FedOBDServer(FedAVGServer):
             return f"{self.round_number}_{self.__epoch_cnt}"
         return super()._get_stat_key()
 
-    def _after_aggregate_worker_data(self, result):
+    def _aggregate_worker_data(self) -> dict:
+        result = super()._aggregate_worker_data()
         assert result
         self._compute_stat = False
         if self.__phase == Phase.STAGE_ONE:
@@ -49,7 +50,7 @@ class FedOBDServer(FedAVGServer):
                 result["end_training"] = True
             case _:
                 raise NotImplementedError(f"unknown phase {self.__phase}")
-        super()._after_aggregate_worker_data(result=result)
+        return result
 
     def _stopped(self) -> bool:
         return self.__phase == Phase.END

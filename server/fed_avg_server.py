@@ -26,18 +26,21 @@ class FedAVGServer(AggregationServer):
     def early_stop(self) -> bool:
         return self.__early_stop
 
-    def _before_start(self) -> None:
-        if hasattr(self, "need_init_performance") and getattr(
-            self, "need_init_performance"
-        ):
-            self._record_compute_stat(parameter_dict=self._get_init_model())
-            self.__stat[0] = self.__stat.pop(1)
-        super()._before_start()
-
     def _before_send_result(self, result) -> None:
         if "parameter" in result:
-            if self._compute_stat or self.__early_stop:
-                self._record_compute_stat(result["parameter"])
+            init_parameter: bool = result.get("init_parameter", False)
+            if (
+                self._compute_stat
+                or self.__early_stop
+                or (init_parameter and getattr(self, "need_init_performance", False))
+            ):
+                if init_parameter:
+                    self.__record_compute_stat(
+                        result["parameter"], keep_performance_logger=False
+                    )
+                    self.__stat[0] = self.__stat.pop(1)
+                else:
+                    self.__record_compute_stat(result["parameter"])
             if self.__early_stop and self._convergent():
                 result["end_training"] = True
         super()._before_send_result(result)
@@ -49,10 +52,13 @@ class FedAVGServer(AggregationServer):
     def _get_stat_key(self):
         return self._round_number
 
-    def _record_compute_stat(self, parameter_dict: dict) -> None:
+    def __record_compute_stat(
+        self, parameter_dict: dict, keep_performance_logger: bool = True
+    ) -> None:
         self.tester.set_visualizer_prefix(f"round: {self._round_number},")
-        metric = self.get_metric(parameter_dict)
-
+        metric = self.get_metric(
+            parameter_dict, keep_performance_logger=keep_performance_logger
+        )
         round_stat = {}
         round_stat["test_loss"] = metric["loss"]
         round_stat["test_acc"] = metric["acc"]
