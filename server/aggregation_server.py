@@ -94,7 +94,6 @@ class AggregationServer(Server):
     def _after_send_result(self, result: dict) -> None:
         if "in_round_data" not in result and "init_parameter" not in result:
             self._round_number += 1
-            print("add round number", self._round_number)
         self.__algorithm.clear_worker_data()
 
     def _stopped(self) -> bool:

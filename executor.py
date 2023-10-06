@@ -2,6 +2,7 @@ import copy
 import multiprocessing
 import os
 import threading
+from functools import cached_property
 from typing import Any, Callable
 
 import gevent.local
@@ -10,7 +11,6 @@ import torch
 from cyy_torch_toolbox.device import get_device
 
 from config import DistributedTrainingConfig
-from topology.endpoint import Endpoint
 
 
 class ExecutorContext:
@@ -47,15 +47,24 @@ class Executor:
         name: str,
         device_lock: threading.RLock,
     ) -> None:
-        self.config: DistributedTrainingConfig = copy.deepcopy(config)
+        self.__config: DistributedTrainingConfig = copy.deepcopy(config)
         self.__used_device_memory = None
         self.__name = name
         self.__device_lock: threading.RLock = device_lock
         self.__hold_device_lock: bool = False
-        assert self.config.save_dir is not None
-        self.config.save_dir = os.path.abspath(
-            os.path.join(self.config.save_dir, self.__name.replace(" ", "_"))
+
+    @property
+    def config(self) -> DistributedTrainingConfig:
+        return self.__config
+
+    @cached_property
+    def save_dir(self) -> str:
+        assert self.config.get_save_dir()
+        executor_save_dir = os.path.abspath(
+            os.path.join(self.config.get_save_dir(), self.__name.replace(" ", "_"))
         )
+        os.makedirs(executor_save_dir, exist_ok=True)
+        return executor_save_dir
 
     def _get_device(self, lock_callback: None | Callable = None) -> torch.device:
         if not hasattr(self.__thread_data, "device"):

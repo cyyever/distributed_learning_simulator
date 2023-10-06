@@ -59,35 +59,30 @@ class FedAVGServer(AggregationServer):
         metric = self.get_metric(
             parameter_dict, keep_performance_logger=keep_performance_logger
         )
-        round_stat = {}
-        round_stat["test_loss"] = metric["loss"]
-        round_stat["test_acc"] = metric["acc"]
+        round_stat = {f"test_{k}": v for k, v in metric.items()}
 
         key = self._get_stat_key()
         assert key not in self.__stat
 
         self.__stat[key] = round_stat
-        os.makedirs(self.config.save_dir, exist_ok=True)
         with open(
-            os.path.join(self.config.save_dir, "round_record.json"),
+            os.path.join(self.save_dir, "round_record.json"),
             "wt",
             encoding="utf8",
         ) as f:
             json.dump(self.__stat, f)
 
-        max_acc = max(t["test_acc"] for t in self.__stat.values())
+        max_acc = max(t["test_accuracy"] for t in self.__stat.values())
         if max_acc > self.__max_acc:
             self.__max_acc = max_acc
-            with open(
-                os.path.join(self.config.save_dir, "best_global_model.pk"), "wb"
-            ) as f:
+            with open(os.path.join(self.save_dir, "best_global_model.pk"), "wb") as f:
                 pickle.dump(
                     parameter_dict,
                     f,
                 )
 
     def _convergent(self) -> bool:
-        max_acc = max(t["test_acc"] for t in self.__stat.values())
+        max_acc = max(t["test_accuracy"] for t in self.__stat.values())
         diff = 0.001
         if max_acc > self.__max_acc + diff:
             self.__max_acc = max_acc
@@ -97,7 +92,7 @@ class FedAVGServer(AggregationServer):
         get_logger().error(
             "max acc is %s diff is %s",
             self.__max_acc,
-            self.__max_acc - self.__stat[self._get_stat_key()]["test_acc"],
+            self.__max_acc - self.__stat[self._get_stat_key()]["test_accuracy"],
         )
         self.__plateau += 1
         get_logger().error("plateau is %s", self.__plateau)

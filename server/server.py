@@ -8,10 +8,10 @@ from typing import Any
 import gevent
 import gevent.lock
 from cyy_naive_lib.log import get_logger
+from cyy_naive_lib.topology.cs_endpoint import ServerEndpoint
 from cyy_torch_toolbox.inferencer import Inferencer
 from cyy_torch_toolbox.ml_type import MachineLearningPhase
 from executor import Executor
-from topology.cs_endpoint import ServerEndpoint
 
 
 class Server(Executor):
@@ -47,17 +47,13 @@ class Server(Executor):
         else:
             self.tester.disable_hook("performance_metric_logger")
         self.tester.inference(epoch=1)
-        metric: dict = {
-            "acc": self.tester.performance_metric.get_accuracy(1),
-            "loss": self.tester.performance_metric.get_loss(1),
-        }
+        metric: dict = self.tester.performance_metric.get_epoch_metric(1)
         self._release_device_lock()
         self.tester.offload_from_device()
         return metric
 
     def start(self) -> None:
-        os.makedirs(self.config.save_dir, exist_ok=True)
-        with open(os.path.join(self.config.save_dir, "config.pkl"), "wb") as f:
+        with open(os.path.join(self.save_dir, "config.pkl"), "wb") as f:
             pickle.dump(self.config, f)
 
         with self._get_execution_context():

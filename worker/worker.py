@@ -1,12 +1,14 @@
+import os
 from functools import cached_property
 from typing import Any
 
+import dill
 from cyy_naive_lib.log import get_logger
+from cyy_naive_lib.topology.cs_endpoint import ClientEndpoint
 from cyy_torch_toolbox.ml_type import ExecutorHookPoint
 from cyy_torch_toolbox.trainer import Trainer
 from executor import Executor
 from practitioner import Practitioner
-from topology.cs_endpoint import ClientEndpoint
 
 
 class Worker(Executor):
@@ -34,9 +36,9 @@ class Worker(Executor):
 
     @cached_property
     def trainer(self) -> Trainer:
-        return self.new_trainer()
+        return self.__new_trainer()
 
-    def new_trainer(self) -> Trainer:
+    def __new_trainer(self) -> Trainer:
         return self.__practitioner.create_trainer(self.config)
 
     def _offload_from_device(self) -> None:
@@ -52,6 +54,13 @@ class Worker(Executor):
 
     def _before_training(self) -> None:
         pass
+
+    def _after_training(self) -> None:
+        with open(os.path.join(self.save_dir, "hyper_parameter.pk"), "wb") as f:
+            dill.dump(
+                self.trainer.hyper_parameter,
+                f,
+            )
 
     def _stopped(self) -> bool:
         return self._round_num > self.config.round or self._force_stop
@@ -90,3 +99,4 @@ class Worker(Executor):
         get_logger().debug("finish worker %s", self.worker_id)
         get_logger().debug("close endpoint")
         self._endpoint.close()
+        self._after_training()

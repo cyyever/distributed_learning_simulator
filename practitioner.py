@@ -11,13 +11,21 @@ from cyy_torch_toolbox.trainer import Trainer
 class Practitioner:
     def __init__(self, practitioner_id: int):
         self.practitioner_id = practitioner_id
-        self._dataset_indices: dict = {}
+        self.__dataset_indices: dict = {}
+
+    @property
+    def dataset_indices(self):
+        return self.__dataset_indices
 
     def add_dataset_collection(self, name: str, indices: dict) -> None:
-        self._dataset_indices[name] = indices
+        assert indices
+        for v in indices.values():
+            assert v
+
+        self.__dataset_indices[name] = indices
 
     def has_dataset(self, name: str) -> bool:
-        return name in self._dataset_indices
+        return name in self.__dataset_indices
 
     def create_trainer(self, config: DefaultConfig) -> Trainer:
         dc = config.create_dataset_collection()
@@ -25,7 +33,7 @@ class Practitioner:
         for phase in MachineLearningPhase:
             trainer.dataset_collection.set_subset(
                 phase=phase,
-                indices=self._dataset_indices[trainer.dataset_collection.name][phase],
+                indices=self.__dataset_indices[trainer.dataset_collection.name][phase],
             )
         return trainer
 
@@ -67,12 +75,13 @@ class PersistentPractitioner(Practitioner):
             super().__init__(practitioner_id=self.create_practitioner())
         else:
             super().__init__(practitioner_id=practitioner_id)
-            self._dataset_indices = self.__get_datasets()
+            for name, indices in self.__get_datasets():
+                super().add_dataset_collection(name, indices)
 
     def iid_sample_dataset(self, name: str, percentage: float) -> None:
         config = DatasetCollectionConfig(dataset_name=name)
         dc = config.create_dataset_collection()
-        result: dict = {}
+        result: dict[MachineLearningPhase, list] = {}
         for phase in MachineLearningPhase:
             dataset_util = dc.get_dataset_util(phase=phase)
             result[phase] = sum(dataset_util.iid_sample(percentage).values(), start=[])
@@ -108,7 +117,7 @@ class PersistentPractitioner(Practitioner):
         return pickle.loads(dataset_blob)
 
     def __store_datasets(self) -> None:
-        dataset_blob = pickle.dumps(self._dataset_indices)
+        dataset_blob = pickle.dumps(self.dataset_indices)
         with self.connect_db() as conn:
             cur = conn.cursor()
             cur.execute(

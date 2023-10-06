@@ -1,12 +1,15 @@
 import functools
 import itertools
 
+from cyy_naive_lib.topology.central_topology import ProcessPipeCentralTopology
+from cyy_torch_toolbox.data_structure.torch_process_context import \
+    TorchProcessContext
+
 from _algorithm_factory import CentralizedAlgorithmFactory
 from algorithm import register_algorithms
 from config import DistributedTrainingConfig
 from data_split import get_data_splitter
 from practitioner import PersistentPractitioner, Practitioner
-from topology.central_topology import ProcessCentralTopology
 
 register_algorithms()
 
@@ -32,7 +35,9 @@ def get_worker_config(
         config.worker_number = len(practitioners)
 
     assert CentralizedAlgorithmFactory.has_algorithm(config.distributed_algorithm)
-    topology = ProcessCentralTopology(worker_num=config.worker_number)
+    topology = ProcessPipeCentralTopology(
+        mp_context=TorchProcessContext(), worker_num=config.worker_number
+    )
     result: dict = {"topology": topology}
     result["server"] = {}
     result["server"]["constructor"] = functools.partial(

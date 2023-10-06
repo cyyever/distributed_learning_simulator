@@ -12,6 +12,7 @@ from cyy_torch_toolbox.device import get_devices
 class DistributedTrainingConfig(Config):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
+        self.exp_name: str = ""
         self.distributed_algorithm: str = ""
         self.worker_number: int = 0
         self.parallel_number: int = len(get_devices())
@@ -20,8 +21,7 @@ class DistributedTrainingConfig(Config):
         self.log_batch_loss: bool = False
         self.distribute_init_parameters: bool = True
         self.server_send_file: bool = False
-        self.log_file: None | str = None
-        self.offload_device: bool = False
+        self.log_file: str = ""
         self.limited_resource: bool = False
         self.endpoint_kwargs: dict = {}
         self.algorithm_kwargs: dict = {}
@@ -43,8 +43,11 @@ class DistributedTrainingConfig(Config):
             date_time,
             str(uuid.uuid4()),
         )
+        if self.exp_name:
+            dir_suffix = os.path.join(self.exp_name, dir_suffix)
         self.save_dir = os.path.join("session", dir_suffix)
         self.log_file = str(os.path.join("log", dir_suffix)) + ".log"
+        assert self.reproducible_env_config.make_reproducible_env
 
     def create_trainer(self, *args, **kwargs):
         trainer = super().create_trainer(*args, **kwargs)

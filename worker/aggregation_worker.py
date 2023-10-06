@@ -12,7 +12,7 @@ from .client import Client
 class AggregationWorker(Client):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        self._aggregation_time = ExecutorHookPoint.AFTER_EXECUTE
+        self._aggregation_time: ExecutorHookPoint = ExecutorHookPoint.AFTER_EXECUTE
         self._reuse_learning_rate: bool = False
         self._choose_model_by_validation: bool = True
         self._send_parameter_diff: bool = True

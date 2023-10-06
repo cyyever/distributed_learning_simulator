@@ -12,7 +12,7 @@ class ShapleyValueAlgorithm(FedAVGAlgorithm):
         super().__init__(**kwargs)
         self._server: FedAVGServer = server
         self.accumulate = False
-        self.metric_type: str = "acc"
+        self.metric_type: str = "accuracy"
         self.sv_algorithm = None
         self.sv_algorithm_cls = sv_algorithm_cls
         self.shapley_values: dict = {}

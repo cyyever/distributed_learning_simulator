@@ -18,12 +18,11 @@ class FedAVGWorker(AggregationWorker):
         self._register_aggregation()
 
     def _offload_from_device(self) -> None:
-        super()._offload_from_device()
         if self.config.limited_resource:
             self._model_cache.save()
+        super()._offload_from_device()
 
     def __get_result_from_server(self) -> bool:
-        self._offload_from_device()
         while True:
             result: None | dict = super()._get_data_from_server()
             get_logger().debug("get result from server %s", type(result))

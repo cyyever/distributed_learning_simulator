@@ -1,6 +1,6 @@
 from typing import Callable
 
-from topology.cs_endpoint import ClientEndpoint, ServerEndpoint
+from cyy_naive_lib.topology.cs_endpoint import ClientEndpoint, ServerEndpoint
 
 
 class CentralizedAlgorithmFactory:
