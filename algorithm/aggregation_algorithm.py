@@ -91,7 +91,8 @@ class AggregationAlgorithm:
 
     def clear_worker_data(self) -> None:
         for v in self._all_worker_data.values():
-            v.clear()
+            if v is not None:
+                v.clear()
         self._all_worker_data.clear()
 
     def exit(self) -> None:
