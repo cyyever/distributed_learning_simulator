@@ -7,7 +7,7 @@ from torch_geometric.typing import pyg_lib
 from torch_geometric.utils import sort_edge_index
 from torch_geometric.utils.sparse import index2ptr
 
-from .data_spliting import DataSplitterBase
+from .base import SamplerBase
 
 
 def METIS(data, num_parts: int, recursive: bool = False) -> Tensor:
@@ -54,8 +54,7 @@ def METIS(data, num_parts: int, recursive: bool = False) -> Tensor:
     return cluster
 
 
-class GraphSplitter(DataSplitterBase):
+class GraphSplitter(SamplerBase):
     def __init__(self, config):
-        super().__init__(config=config)
-        dc = self.__config.create_dataset_collection()
+        dc = config.create_dataset_collection()
         METIS(dc.get_dataset_util().get_graph(0), num_parts=config.worker_number)
