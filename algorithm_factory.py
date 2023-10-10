@@ -8,8 +8,8 @@ from cyy_torch_toolbox.data_structure.torch_process_context import \
 from _algorithm_factory import CentralizedAlgorithmFactory
 from algorithm import register_algorithms
 from config import DistributedTrainingConfig
-from data_split import get_data_splitter
 from practitioner import PersistentPractitioner, Practitioner
+from sampler import get_dataset_sampler
 
 register_algorithms()
 
@@ -19,12 +19,12 @@ def get_worker_config(
 ) -> dict:
     practitioners = []
     if practitioner_ids is None:
-        data_splitter = get_data_splitter(config)
+        sampler = get_dataset_sampler(config)
         for practitioner_id in range(config.worker_number):
             practitioner = Practitioner(practitioner_id=practitioner_id)
             practitioner.add_dataset_collection(
                 name=config.dc_config.dataset_name,
-                indices=data_splitter.get_dataset_indices(worker_id=practitioner_id),
+                indices=sampler.get_dataset_indices(worker_id=practitioner_id),
             )
             practitioners.append(practitioner)
     else:

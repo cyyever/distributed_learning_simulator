@@ -11,6 +11,7 @@ import gevent
 from cyy_naive_lib.data_structure.process_initialization import \
     get_process_data
 from cyy_naive_lib.log import add_file_handler, get_logger
+from cyy_naive_lib.time_counter import TimeCounter
 from cyy_torch_toolbox.data_structure.torch_process_pool import \
     TorchProcessPool
 
@@ -79,6 +80,7 @@ def train(
     non_blocking: bool = False,
     practitioner_ids: None | set = None,
 ) -> int | None:
+    timer = TimeCounter()
     if hasattr(os, "sysconf"):
         name = "SC_OPEN_MAX"
         value = os.sysconf(name)
@@ -91,9 +93,9 @@ def train(
     worker_config = get_worker_config(config, practitioner_ids=practitioner_ids)
     topology = worker_config.pop("topology")
     device_lock = multiprocessing.Manager().RLock()
-    task_id: int | None = uuid.uuid4().int
-    if not non_blocking:
-        task_id = None
+    task_id: int | None = None
+    if non_blocking:
+        task_id = uuid.uuid4().int
     process_pool: TorchProcessPool = TorchProcessPool(
         initargs=[{"fun_kwargs": {"device_lock": device_lock, "topology": topology}}],
     )
@@ -112,15 +114,15 @@ def train(
             worker_configs=worker_configs,
             server_config=server_config,
         )
-    if not non_blocking:
-        process_pool.shutdown()
-        return None
-    tasks[task_id] = {
-        "process_pool": process_pool,
-        "practitioner_ids": practitioner_ids,
-        "config": config,
-    }
-    return task_id
+    if non_blocking:
+        tasks[task_id] = {
+            "process_pool": process_pool,
+            "practitioner_ids": practitioner_ids,
+            "config": config,
+        }
+        return task_id
+    process_pool.shutdown()
+    get_logger().info("training use %s seconds", timer.elapsed_milliseconds() / 1000)
 
 
 def get_training_result(task_id: int, timeout: None | float = None) -> None | dict:

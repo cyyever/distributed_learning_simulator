@@ -17,7 +17,7 @@ class DistributedTrainingConfig(Config):
         self.worker_number: int = 0
         self.parallel_number: int = len(get_devices())
         self.round: int = 0
-        self.dataset_split_method: str = "iid"
+        self.dataset_sampling: str = "iid"
         self.log_batch_loss: bool = False
         self.distribute_init_parameters: bool = True
         self.server_send_file: bool = False
@@ -25,7 +25,6 @@ class DistributedTrainingConfig(Config):
         self.limited_resource: bool = False
         self.endpoint_kwargs: dict = {}
         self.algorithm_kwargs: dict = {}
-        self.frozen_modules: list = []
 
     def load_config_and_process(self, conf: Any) -> None:
         self.load_config(conf)
@@ -35,10 +34,10 @@ class DistributedTrainingConfig(Config):
             "name", self.dc_config.dataset_name
         )
         dir_suffix = os.path.join(
-            self.distributed_algorithm
-            if self.dataset_split_method.lower() == "iid"
-            else f"{self.distributed_algorithm}_{self.dataset_split_method}",
-            dataset_name,
+            self.distributed_algorithm,
+            dataset_name
+            if self.dataset_sampling.lower() == "iid"
+            else f"{dataset_name}_{self.dataset_sampling}",
             self.model_config.model_name,
             date_time,
             str(uuid.uuid4()),
@@ -51,8 +50,6 @@ class DistributedTrainingConfig(Config):
 
     def create_trainer(self, *args, **kwargs):
         trainer = super().create_trainer(*args, **kwargs)
-        for module in self.frozen_modules:
-            trainer.model_util.freeze_modules(module_name=module)
         return trainer
 
 

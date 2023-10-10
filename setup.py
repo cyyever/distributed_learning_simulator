@@ -20,7 +20,7 @@ setuptools.setup(
         "distributed_learning_simulator.server": "server",
         "distributed_learning_simulator.topology": "topology",
         "distributed_learning_simulator.worker": "worker",
-        "distributed_learning_simulator.util": "util",
+        "distributed_learning_simulator.sampler": "sampler",
     },
     classifiers=[
         "Programming Language :: Python :: 3",
