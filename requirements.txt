@@ -1,4 +1,5 @@
 hydra-core
+spacy
 dill
 gevent
 colorlog
@@ -9,6 +10,7 @@ tqdm
 torch>=2.0
 nvidia-ml-py
 torchtext
+torchmetrics
 torchvision
 git+ssh://git@github.com/cyyever/torch_toolbox.git@main#egg=cyy_torch_toolbox
 git+ssh://git@github.com/cyyever/torch_algorithm.git@main#egg=cyy_torch_algorithm

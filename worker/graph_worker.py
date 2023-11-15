@@ -23,12 +23,9 @@ class GraphWorker(FedAVGWorker):
         self.__old_edge_index: None | torch.Tensor = None
         self.__n_id: None | torch.Tensor = None
         self._hook_handles: dict = {}
-        # self._skipped_batch_cnt: int = 0
         self._comunicated_batch_cnt: int = 0
-        # self._skipped_edge_cnt: int = 0
         self._skipped_embedding_bytes: int = 0
         self._round_skipped_bytes: dict = {}
-        # self._communicated_edge_cnt: int = 0
         self._communicated_embedding_bytes: int = 0
         self._aggregated_bytes: int = 0
         self._round_communicated_bytes: dict = {}
@@ -83,7 +80,13 @@ class GraphWorker(FedAVGWorker):
                 get_logger().warning("not share feature")
         self.__exchange_training_node_indices()
         self.__clear_unrelated_edges()
-        self._determin_batch_size()
+        self.trainer.update_dataloader_kwargs(
+            batch_number=self.config.algorithm_kwargs["batch_number"]
+        )
+        if "num_neighbor" in self.config.algorithm_kwargs:
+            self.trainer.update_dataloader_kwargs(
+                num_neighbor=self.config.algorithm_kwargs["num_neighbor"]
+            )
         for idx, module in enumerate(self._get_message_passing_modules()):
             module.register_forward_pre_hook(
                 hook=functools.partial(self._record_embedding_size, module_index=idx),
@@ -94,21 +97,6 @@ class GraphWorker(FedAVGWorker):
             self._clear_cross_client_edges()
             return
 
-        # We need to get training and neighbor nodes
-        input_nodes = torch.tensor(
-            list(
-                set(self.edge_index.view(-1).tolist())
-                - set(
-                    torch_geometric.utils.mask_to_index(
-                        self.validation_node_mask
-                    ).tolist()
-                )
-            ),
-            dtype=torch.long,
-        )
-        self.trainer.hyper_parameter.extra_parameters["pyg_input_nodes"] = {
-            MachineLearningPhase.Training: input_nodes
-        }
         for module in self.trainer.model.modules():
             module.register_forward_pre_hook(
                 hook=self._catch_n_id,
@@ -116,7 +104,7 @@ class GraphWorker(FedAVGWorker):
                 prepend=True,
             )
             break
-        for idx, module in enumerate(self._get_message_passing_modules()):
+        for idx, _ in enumerate(self._get_message_passing_modules()):
             hook: Callable = self._pass_node_feature
             if idx == 0:
                 hook = functools.partial(
@@ -263,14 +251,12 @@ class GraphWorker(FedAVGWorker):
         if module_index > 0:
             x = args[0]
             cnt = len(self.training_node_boundary.intersection(set(self.n_id.tolist())))
-            # self._skipped_batch_cnt += 1
-            # self._skipped_edge_cnt += cnt
             assert len(x.shape) == 2
             self._skipped_embedding_bytes += x.shape[1] * x.element_size() * cnt
 
         return tuple(args), kwargs
 
-    def training_boundary_feature(self, x) -> tuple:
+    def training_boundary_feature(self, x) -> tuple | None:
         assert len(self.training_node_boundary) <= len(self.training_node_indices)
 
         assert x.shape[0] == self.n_id.shape[0]
@@ -280,7 +266,8 @@ class GraphWorker(FedAVGWorker):
             if node_index in self.training_node_boundary:
                 indices.append(idx)
                 node_indices.append(node_index)
-        assert indices
+        if not indices:
+            return None
         return (
             torch.index_select(x, 0, torch.tensor(indices, device=x.device))
             .detach()
@@ -291,6 +278,8 @@ class GraphWorker(FedAVGWorker):
     def _get_cross_deivce_embedding(
         self, embedding_indices, embedding, x
     ) -> torch.Tensor:
+        if not embedding_indices:
+            return x
         new_x = torch.zeros_like(x)
         mask1 = torch.zeros_like(x, dtype=torch.bool)
         mask2 = torch.zeros_like(x, dtype=torch.bool)
@@ -320,7 +309,7 @@ class GraphWorker(FedAVGWorker):
         return new_x
 
     def _catch_n_id(self, module, args, kwargs) -> tuple | None:
-        self.__n_id = kwargs.pop("n_id", None)
+        self.__n_id = kwargs["n_id"]
         return args, kwargs
 
     def _record_embedding_size(
@@ -356,7 +345,6 @@ class GraphWorker(FedAVGWorker):
             "boundary": self._other_training_node_indices.intersection(n_id_set),
         }
         cnt = len(n_id_set.intersection(self.training_node_boundary))
-        # self._communicated_edge_cnt += cnt
         self._comunicated_batch_cnt += 1
         self._communicated_embedding_bytes += cnt * x[0].shape[0] * x.element_size()
         self.send_data_to_server(sent_data)
@@ -368,11 +356,6 @@ class GraphWorker(FedAVGWorker):
         )
         self.__n_id = None
         return (new_x, self.__old_edge_index, *args[2:]), kwargs
-
-    def _determin_batch_size(self) -> None:
-        self.trainer.hyper_parameter.extra_parameters[
-            "batch_number"
-        ] = self.config.algorithm_kwargs["batch_number"]
 
     def _get_message_passing_modules(self) -> list:
         return [
@@ -413,6 +396,3 @@ class GraphWorker(FedAVGWorker):
                 | self._recorded_model_size,
                 f,
             )
-            # "skipped_edge_cnt": self._skipped_edge_cnt,
-            # "skipped_batch_cnt": self._skipped_batch_cnt,
-            # "communicated_edge_cnt": self._communicated_edge_cnt,

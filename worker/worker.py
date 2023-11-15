@@ -88,7 +88,7 @@ class Worker(Executor):
                         )
                     )
                 else:
-                    self.trainer.disable_hook("logger")
+                    self.trainer.hook_config.summarize_executor = False
                 self.trainer.set_visualizer_prefix(prefix=f"round: {self._round_num},")
                 self.trainer.train(
                     keep_best_model=True,

@@ -31,7 +31,7 @@ class Server(Executor):
         tester = self.config.create_inferencer(phase=MachineLearningPhase.Test)
         tester.dataset_collection.remove_dataset(phase=MachineLearningPhase.Training)
         tester.dataset_collection.remove_dataset(phase=MachineLearningPhase.Validation)
-        tester.disable_hook("logger")
+        tester.hook_config.summarize_executor = False
         return tester
 
     def get_metric(
@@ -42,11 +42,7 @@ class Server(Executor):
         self.tester.model_util.load_parameter_dict(parameter_dict)
         self.tester.model_util.disable_running_stats()
         self.tester.set_device(self._get_device())
-        if keep_performance_logger:
-            self.tester.enable_hook("performance_metric_logger")
-        else:
-            self.tester.disable_hook("performance_metric_logger")
-        self.tester.inference(epoch=1)
+        self.tester.inference(epoch=1, log_performance_metric=keep_performance_logger)
         metric: dict = self.tester.performance_metric.get_epoch_metric(1)
         self._release_device_lock()
         self.tester.offload_from_device()
