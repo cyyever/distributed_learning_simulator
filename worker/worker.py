@@ -89,10 +89,11 @@ class Worker(Executor):
                     )
                 else:
                     self.trainer.hook_config.summarize_executor = False
+                assert self.trainer.has_hook_obj("batch_loss_logger")
+                self.trainer.disable_hook("batch_loss_logger")
+                self.trainer.get_hook("keep_model_hook").keep_best_model = True
                 self.trainer.set_visualizer_prefix(prefix=f"round: {self._round_num},")
                 self.trainer.train(
-                    keep_best_model=True,
-                    batch_loss_log_times=None if self.config.log_batch_loss else 0,
                     **kwargs,
                 )
                 self._round_num += 1
