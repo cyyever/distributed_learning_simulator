@@ -2,8 +2,7 @@ import os
 import pickle
 import sqlite3
 
-from cyy_torch_toolbox.dataset_collection import DatasetCollectionConfig
-from cyy_torch_toolbox.default_config import DefaultConfig
+from cyy_torch_toolbox.default_config import Config
 from cyy_torch_toolbox.ml_type import MachineLearningPhase
 from cyy_torch_toolbox.trainer import Trainer
 
@@ -27,7 +26,7 @@ class Practitioner:
     def has_dataset(self, name: str) -> bool:
         return name in self.__dataset_indices
 
-    def create_trainer(self, config: DefaultConfig) -> Trainer:
+    def create_trainer(self, config: Config) -> Trainer:
         dc = config.create_dataset_collection()
         trainer = config.create_trainer(dc=dc)
         for phase in MachineLearningPhase:
@@ -77,26 +76,6 @@ class PersistentPractitioner(Practitioner):
             super().__init__(practitioner_id=practitioner_id)
             for name, indices in self.__get_datasets():
                 super().add_dataset_collection(name, indices)
-
-    def iid_sample_dataset(self, name: str, percentage: float) -> None:
-        config = DatasetCollectionConfig(dataset_name=name)
-        dc = config.create_dataset_collection()
-        result: dict[MachineLearningPhase, list] = {}
-        for phase in MachineLearningPhase:
-            dataset_util = dc.get_dataset_util(phase=phase)
-            result[phase] = sum(dataset_util.iid_sample(percentage).values(), start=[])
-        self.add_dataset_collection(name, result)
-
-    def non_iid_sample_dataset(self, name: str, percents: list[float]) -> None:
-        config = DatasetCollectionConfig(dataset_name=name)
-        dc = config.create_dataset_collection()
-        result: dict = {}
-        for phase in MachineLearningPhase:
-            dataset_util = dc.get_dataset_util(phase=phase)
-            result[phase] = sum(
-                dataset_util.sample_by_labels(percents).values(), start=[]
-            )
-        self.add_dataset_collection(name, result)
 
     def add_dataset_collection(self, *args, **kwargs):
         super().add_dataset_collection(*args, **kwargs)

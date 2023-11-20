@@ -18,7 +18,6 @@ class DistributedTrainingConfig(Config):
         self.parallel_number: int = len(get_devices())
         self.round: int = 0
         self.dataset_sampling: str = "iid"
-        self.log_batch_loss: bool = False
         self.distribute_init_parameters: bool = True
         self.server_send_file: bool = False
         self.log_file: str = ""
