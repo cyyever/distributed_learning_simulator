@@ -1,6 +1,5 @@
 ---
 cache_transforms: cpu
 log_level: INFO
-log_batch_loss: false
 save_performance_metric: false
 use_amp: false
