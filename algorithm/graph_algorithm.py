@@ -29,14 +29,16 @@ class GraphNodeEmbeddingPassingAlgorithm(FedAVGAlgorithm):
         if worker_data is None:
             return
         if "node_embedding" in worker_data:
-            node_embedding, node_indices = worker_data.pop("node_embedding")
-            for tensor_idx, node_idx in enumerate(node_indices):
-                assert node_idx not in self.__node_embedding_indices
-                self.__node_embedding_indices[node_idx] = (
-                    len(self.__node_embeddings),
-                    tensor_idx,
-                )
-            self.__node_embeddings.append(node_embedding)
+            node_embedding_tuple = worker_data.pop("node_embedding")
+            if node_embedding_tuple is not None:
+                node_embedding, node_indices = node_embedding_tuple
+                for tensor_idx, node_idx in enumerate(node_indices):
+                    assert node_idx not in self.__node_embedding_indices
+                    self.__node_embedding_indices[node_idx] = (
+                        len(self.__node_embeddings),
+                        tensor_idx,
+                    )
+                self.__node_embeddings.append(node_embedding)
             self.__boundaris[worker_id] = worker_data.pop("boundary")
 
     def __get_node_embedding(self, node_idx):
@@ -60,14 +62,17 @@ class GraphNodeEmbeddingPassingAlgorithm(FedAVGAlgorithm):
             for worker_id, boundary in self.__boundaris.items():
                 node_indices = boundary.intersection(node_embedding_index_set)
                 node_indices = tuple(sorted(node_indices))
-                res["worker_result"][worker_id] = {
-                    "node_indices": node_indices,
-                    "node_embedding": torch.stack(
+                node_embedding = None
+                if node_indices:
+                    node_embedding = torch.stack(
                         [
                             self.__get_node_embedding(node_idx).cpu()
                             for node_idx in node_indices
                         ]
-                    ),
+                    )
+                res["worker_result"][worker_id] = {
+                    "node_indices": node_indices,
+                    "node_embedding": node_embedding,
                 }
             self.__node_embeddings = []
             self.__node_embedding_indices = {}

@@ -1,4 +1,5 @@
 hydra-core
+huggingface-hub
 spacy
 dill
 gevent

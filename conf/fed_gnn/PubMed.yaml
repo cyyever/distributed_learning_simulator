@@ -1,9 +1,0 @@
----
-dataset_name: PubMed
-model_name: SimpleGCN
-distributed_algorithm: fed_gcn
-epoch: 5
-learning_rate: 0.001
-weight_decay: 0
-round: 1000
-worker_number: 100
