@@ -1,0 +1,15 @@
+---
+dataset_name: CitationFull
+model_name: OneGCN
+dataset_kwargs:
+  name: DBLP
+distributed_algorithm: fed_aas
+epoch: 1
+learning_rate: 0.001
+weight_decay: 0
+round: 50
+worker_number: 100
+use_amp: false
+algorithm_kwargs:
+  share_feature: false
+  batch_number: 1

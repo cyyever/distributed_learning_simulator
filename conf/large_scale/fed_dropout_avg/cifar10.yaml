@@ -6,7 +6,7 @@ optimizer_name: SGD
 worker_number: 100
 batch_size: 64
 round: 100
-learning_rate_scheduler: CosineAnnealingLR
+learning_rate_scheduler_name: CosineAnnealingLR
 epoch: 5
 learning_rate: 0.1
 algorithm_kwargs:

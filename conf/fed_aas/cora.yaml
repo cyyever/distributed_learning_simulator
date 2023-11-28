@@ -1,0 +1,11 @@
+---
+dataset_name: Cora
+model_name: SimpleGCN
+distributed_algorithm: fed_aas
+epoch: 10
+use_amp: true
+learning_rate: 0.01
+weight_decay: 0.01
+round: 10
+worker_number: 10
+parallel_number: 2

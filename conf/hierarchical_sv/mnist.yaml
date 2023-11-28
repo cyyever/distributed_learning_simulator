@@ -1,12 +1,16 @@
 ---
 dataset_name: MNIST
 model_name: LeNet5
-distributed_algorithm: fed_avg
+distributed_algorithm: Hierarchical_shapley_value
 optimizer_name: SGD
-worker_number: 10
+worker_number: 6
 batch_size: 64
-round: 20
+round: 2
 learning_rate_scheduler_name: CosineAnnealingLR
-epoch: 2
+epoch: 1
 learning_rate: 0.01
+
+algorithm_kwargs:
+  part_number: 3
+  vp_size: 3
 ...
