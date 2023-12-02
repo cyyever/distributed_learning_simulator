@@ -1,7 +1,9 @@
+import cyy_torch_text  # noqa: F401
 from .fed_avg import *
 from .fed_dropout_avg import *
 
 try:
+    import cyy_torch_graph  # noqa: F401
     from .fed_gcn import *
     from .fed_gnn import *
     from .fed_aas import *
