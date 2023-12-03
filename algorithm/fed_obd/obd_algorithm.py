@@ -1,6 +1,6 @@
 import torch
 from cyy_naive_lib.log import get_logger
-from cyy_torch_toolbox.model_util import ModelUtil
+from cyy_torch_toolbox.model.util import ModelUtil
 from cyy_torch_toolbox.tensor import cat_tensors_to_vector
 from torch import nn
 
