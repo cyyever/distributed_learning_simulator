@@ -36,8 +36,7 @@ class FedOBDWorker(FedAVGWorker, OpportunisticBlockDropoutAlgorithm):
                 "change epoch to %s", self.trainer.hyper_parameter.epoch
             )
             get_logger().warning(
-                "change lr to %s",
-                self.trainer.hyper_parameter.get_learning_rate(self.trainer),
+                "change lr to %s", self.trainer.hyper_parameter.learning_rate
             )
             self._aggregation_time = ExecutorHookPoint.AFTER_EPOCH
             self._register_aggregation()

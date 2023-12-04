@@ -1,5 +1,5 @@
 ---
-dataset_name: IMDB
+dataset_name: imdb
 model_name: TransformerClassificationModel
 distributed_algorithm: sign_SGD
 distribute_init_parameters: false
