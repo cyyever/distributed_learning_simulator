@@ -42,7 +42,8 @@ class Server(Executor):
         self.tester.model_util.load_parameter_dict(parameter_dict)
         self.tester.model_util.disable_running_stats()
         self.tester.set_device(self._get_device())
-        self.tester.inference(epoch=1, log_performance_metric=keep_performance_logger)
+        self.tester.hook_config.log_performance_metric = keep_performance_logger
+        self.tester.inference()
         metric: dict = self.tester.performance_metric.get_epoch_metric(1)
         self._release_device_lock()
         self.tester.offload_from_device()
