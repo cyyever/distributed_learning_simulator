@@ -67,7 +67,7 @@ def start_executors(
             server = worker
             if hasattr(server.algorithm, "shapley_values"):
                 res["sv"] = server.algorithm.shapley_values
-            res |= server.performance_stat[server.round_number - 1]
+            res |= server.performance_stat[max(server.performance_stat.keys())]
             continue
     return res
 

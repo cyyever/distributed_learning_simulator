@@ -2,18 +2,16 @@ import os
 import pickle
 import sqlite3
 
-from cyy_torch_toolbox.default_config import Config
-from cyy_torch_toolbox.ml_type import MachineLearningPhase
-from cyy_torch_toolbox.trainer import Trainer
+from cyy_torch_toolbox import Config, MachineLearningPhase, Trainer
 
 
 class Practitioner:
-    def __init__(self, practitioner_id: int):
-        self.practitioner_id = practitioner_id
+    def __init__(self, practitioner_id: int) -> None:
+        self.practitioner_id: int = practitioner_id
         self.__dataset_indices: dict = {}
 
     @property
-    def dataset_indices(self):
+    def dataset_indices(self) -> dict:
         return self.__dataset_indices
 
     def add_dataset_collection(self, name: str, indices: dict) -> None:
@@ -74,7 +72,7 @@ class PersistentPractitioner(Practitioner):
             super().__init__(practitioner_id=self.create_practitioner())
         else:
             super().__init__(practitioner_id=practitioner_id)
-            for name, indices in self.__get_datasets():
+            for name, indices in self.__get_datasets().items():
                 super().add_dataset_collection(name, indices)
 
     def add_dataset_collection(self, *args, **kwargs):

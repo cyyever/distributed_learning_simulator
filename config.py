@@ -5,7 +5,7 @@ from typing import Any
 
 import hydra
 import omegaconf
-from cyy_torch_toolbox.default_config import Config
+from cyy_torch_toolbox import Config
 from cyy_torch_toolbox.device import get_devices
 
 

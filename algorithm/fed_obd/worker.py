@@ -35,9 +35,6 @@ class FedOBDWorker(FedAVGWorker, OpportunisticBlockDropoutAlgorithm):
             get_logger().warning(
                 "change epoch to %s", self.trainer.hyper_parameter.epoch
             )
-            get_logger().warning(
-                "change lr to %s", self.trainer.hyper_parameter.learning_rate
-            )
             self._aggregation_time = ExecutorHookPoint.AFTER_EPOCH
             self._register_aggregation()
 
@@ -47,6 +44,7 @@ class FedOBDWorker(FedAVGWorker, OpportunisticBlockDropoutAlgorithm):
         if self.__phase == Phase.STAGE_TWO:
             executor = kwargs["executor"]
             if kwargs["epoch"] == executor.hyper_parameter.epoch:
+                sent_data["final_aggregation"] = True
                 self.__end_training = True
         super()._aggregation(sent_data=sent_data, **kwargs)
 
@@ -68,7 +66,5 @@ class FedOBDWorker(FedAVGWorker, OpportunisticBlockDropoutAlgorithm):
 
         data["in_round_data"] = True
         data["check_acc"] = True
-        if self.__end_training:
-            data["final_aggregation"] = True
         get_logger().warning("phase 2 keys %s", data.keys())
         return data
