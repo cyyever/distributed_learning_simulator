@@ -44,7 +44,7 @@ class Server(Executor):
         self.tester.set_device(self._get_device())
         self.tester.hook_config.log_performance_metric = keep_performance_logger
         self.tester.inference()
-        metric: dict = self.tester.performance_metric.get_epoch_metric(1)
+        metric: dict = self.tester.performance_metric.get_epoch_metrics(1)
         self._release_device_lock()
         self.tester.offload_from_device()
         return metric
