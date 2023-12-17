@@ -7,7 +7,6 @@ from .phase import Phase
 
 class FedOBDServer(FedAVGServer):
     __phase: Phase = Phase.STAGE_ONE
-    __epoch_cnt = 0
 
     def start(self):
         self._endpoint.quant_broadcast = True
@@ -19,10 +18,9 @@ class FedOBDServer(FedAVGServer):
         return super()._select_workers()
 
     def _get_stat_key(self):
-        if self.__phase == Phase.STAGE_TWO:
-            self.__epoch_cnt = self.__epoch_cnt + 1
-            return f"{self.round_number}_{self.__epoch_cnt}"
-        return super()._get_stat_key()
+        if not self.performance_stat:
+            return super()._get_stat_key()
+        return max(self.performance_stat.keys()) + 1
 
     def _aggregate_worker_data(self) -> dict:
         result = super()._aggregate_worker_data()
