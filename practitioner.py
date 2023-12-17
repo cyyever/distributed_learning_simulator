@@ -2,38 +2,29 @@ import os
 import pickle
 import sqlite3
 
-from cyy_torch_toolbox.default_config import Config
-from cyy_torch_toolbox.ml_type import MachineLearningPhase
-from cyy_torch_toolbox.trainer import Trainer
+from cyy_torch_toolbox import Config, Trainer
+from cyy_torch_toolbox.dataset import DatasetCollectionSampler
 
 
 class Practitioner:
-    def __init__(self, practitioner_id: int) -> None:
+    def __init__(self, practitioner_id: int, worker_id: int) -> None:
         self.practitioner_id: int = practitioner_id
-        self.__dataset_indices: dict = {}
+        self.__worker_id = worker_id
+        self._dataset_sampler: dict[str, DatasetCollectionSampler] = {}
 
-    @property
-    def dataset_indices(self) -> dict:
-        return self.__dataset_indices
-
-    def add_dataset_collection(self, name: str, indices: dict) -> None:
-        assert indices
-        for v in indices.values():
-            assert v
-
-        self.__dataset_indices[name] = indices
+    def set_sampler(self, name: str, sampler: DatasetCollectionSampler) -> None:
+        assert name not in self._dataset_sampler
+        self._dataset_sampler[name] = sampler
 
     def has_dataset(self, name: str) -> bool:
-        return name in self.__dataset_indices
+        return name in self._dataset_sampler
 
     def create_trainer(self, config: Config) -> Trainer:
         dc = config.create_dataset_collection()
         trainer = config.create_trainer(dc=dc)
-        for phase in MachineLearningPhase:
-            trainer.dataset_collection.set_subset(
-                phase=phase,
-                indices=self.__dataset_indices[trainer.dataset_collection.name][phase],
-            )
+        sampler = self._dataset_sampler[trainer.dataset_collection.name]
+        sampler.set_dataset_collection(trainer.dataset_collection)
+        sampler.sample(worker_id=self.__worker_id)
         return trainer
 
 
@@ -41,6 +32,11 @@ class PersistentPractitioner(Practitioner):
     __cache_dir: str = os.path.join(
         os.path.expanduser("~"), ".cache", "distributed_learning"
     )
+
+    def __init__(self, practitioner_id: int, worker_id: int) -> None:
+        super().__init__(practitioner_id=practitioner_id, worker_id=worker_id)
+        for name, sampler in self.__get_datasets().items():
+            super().set_sampler(name, sampler)
 
     @classmethod
     def connect_db(cls):
@@ -60,7 +56,7 @@ class PersistentPractitioner(Practitioner):
 
     @classmethod
     def create_practitioner(cls) -> int:
-        practitioner_id = None
+        practitioner_id: None | int = None
         with cls.connect_db() as conn:
             cur = conn.cursor()
             cur.execute("insert into practitioner values(NULL)")
@@ -69,16 +65,8 @@ class PersistentPractitioner(Practitioner):
         assert practitioner_id is not None
         return practitioner_id
 
-    def __init__(self, practitioner_id: int | None = None):
-        if practitioner_id is None:
-            super().__init__(practitioner_id=self.create_practitioner())
-        else:
-            super().__init__(practitioner_id=practitioner_id)
-            for name, indices in self.__get_datasets().items():
-                super().add_dataset_collection(name, indices)
-
-    def add_dataset_collection(self, *args, **kwargs):
-        super().add_dataset_collection(*args, **kwargs)
+    def set_sampler(self, *args, **kwargs):
+        super().set_sampler(*args, **kwargs)
         self.__store_datasets()
 
     def __get_datasets(self) -> dict:
@@ -96,7 +84,7 @@ class PersistentPractitioner(Practitioner):
         return pickle.loads(dataset_blob)
 
     def __store_datasets(self) -> None:
-        dataset_blob = pickle.dumps(self.dataset_indices)
+        dataset_blob = pickle.dumps(self._dataset_sampler)
         with self.connect_db() as conn:
             cur = conn.cursor()
             cur.execute(

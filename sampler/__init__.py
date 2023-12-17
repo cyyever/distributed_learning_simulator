@@ -5,17 +5,8 @@ currentdir = os.path.dirname(os.path.realpath(__file__))
 
 sys.path.insert(0, os.path.join(currentdir, ".."))
 
-from config import DistributedTrainingConfig
+from cyy_torch_toolbox.dataset import global_sampler_factory
 
-from .base import IIDSampler, RandomClassSampler, RandomSampler, SamplerBase
+from .base import RandomClassSampler
 
-
-def get_dataset_sampler(config: DistributedTrainingConfig) -> SamplerBase:
-    match config.dataset_sampling.lower():
-        case "iid":
-            return IIDSampler(config)
-        case "random":
-            return RandomSampler(config)
-        case "random_class":
-            return RandomClassSampler(config)
-    raise NotImplementedError(config.dataset_sampling)
+global_sampler_factory.register("random_class", RandomClassSampler)

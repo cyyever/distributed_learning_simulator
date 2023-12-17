@@ -18,6 +18,7 @@ class DistributedTrainingConfig(Config):
         self.parallel_number: int = len(get_devices())
         self.round: int = 0
         self.dataset_sampling: str = "iid"
+        self.dataset_sampling_kwargs: dict = {}
         self.distribute_init_parameters: bool = True
         self.server_send_file: bool = False
         self.log_file: str = ""
@@ -46,10 +47,6 @@ class DistributedTrainingConfig(Config):
         self.save_dir = os.path.join("session", dir_suffix)
         self.log_file = str(os.path.join("log", dir_suffix)) + ".log"
         assert self.reproducible_env_config.make_reproducible_env
-
-    def create_trainer(self, *args, **kwargs):
-        trainer = super().create_trainer(*args, **kwargs)
-        return trainer
 
 
 global_config: DistributedTrainingConfig = DistributedTrainingConfig()

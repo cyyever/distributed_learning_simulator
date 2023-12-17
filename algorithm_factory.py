@@ -4,12 +4,12 @@ import itertools
 from cyy_naive_lib.topology.central_topology import ProcessPipeCentralTopology
 from cyy_torch_toolbox.data_structure.torch_process_context import \
     TorchProcessContext
+from cyy_torch_toolbox.dataset import get_dataset_collection_sampler
 
 from _algorithm_factory import CentralizedAlgorithmFactory
 from algorithm import register_algorithms
 from config import DistributedTrainingConfig
 from practitioner import PersistentPractitioner, Practitioner
-from sampler import get_dataset_sampler
 
 register_algorithms()
 
@@ -19,21 +19,30 @@ def get_worker_config(
 ) -> dict:
     practitioners = []
     if practitioner_ids is None:
-        sampler = get_dataset_sampler(config)
+        sampler = get_dataset_collection_sampler(
+            name=config.dataset_sampling,
+            dataset_collection=config.create_dataset_collection(),
+            part_number=config.worker_number,
+            **config.dataset_sampling_kwargs
+        )
         for practitioner_id in range(config.worker_number):
-            practitioner = Practitioner(practitioner_id=practitioner_id)
-            practitioner.add_dataset_collection(
-                name=config.dc_config.dataset_name,
-                indices=sampler.get_dataset_indices(worker_id=practitioner_id),
+            practitioner = Practitioner(
+                practitioner_id=practitioner_id, worker_id=practitioner_id
+            )
+            practitioner.set_sampler(
+                name=config.dc_config.dataset_name, sampler=sampler
             )
             practitioners.append(practitioner)
     else:
-        for practitioner_id in sorted(practitioner_ids):
-            practitioner = PersistentPractitioner(practitioner_id=practitioner_id)
+        for worker_id, practitioner_id in enumerate(sorted(practitioner_ids)):
+            practitioner = PersistentPractitioner(
+                practitioner_id=practitioner_id, worker_id=worker_id
+            )
             assert practitioner.has_dataset(config.dc_config.dataset_name)
             practitioners.append(practitioner)
         config.worker_number = len(practitioners)
 
+    assert practitioners
     assert CentralizedAlgorithmFactory.has_algorithm(config.distributed_algorithm)
     topology = ProcessPipeCentralTopology(
         mp_context=TorchProcessContext(), worker_num=config.worker_number
@@ -70,5 +79,6 @@ def get_worker_config(
                 ),
             }
         )
+    assert client_config
     result["worker"] = client_config
     return result

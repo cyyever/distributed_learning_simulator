@@ -20,14 +20,39 @@ from algorithm_factory import get_worker_config
 from config import DistributedTrainingConfig
 
 
-def start_executors(
-    task_id: int | None,
+def start_server(task_id: int, server_config: dict) -> dict:
+    device_lock = get_process_data()["device_lock"]
+    topology = get_process_data()["topology"]
+
+    server = server_config["constructor"](
+        extra_kwargs={
+            "task_id": task_id,
+            "device_lock": device_lock,
+        },
+        extra_endpoint_kwargs={
+            "topology": topology,
+        },
+    )
+
+    get_logger().debug("run workers")
+    gevent.joinall([gevent.spawn(server.start)], raise_error=True)
+    get_logger().debug("stop process")
+
+    res: dict = {}
+    if hasattr(server.algorithm, "shapley_values"):
+        res["sv"] = server.algorithm.shapley_values
+    res |= {"performance": server.performance_stat}
+    return res
+
+
+def start_workers(
+    task_id: int,
     worker_configs: list[dict],
-    server_config: None | dict = None,
-) -> dict:
+) -> None:
     device_lock = get_process_data()["device_lock"]
     topology = get_process_data()["topology"]
     workers: list = []
+    assert worker_configs
 
     for worker_config in worker_configs:
         workers.append(
@@ -41,35 +66,10 @@ def start_executors(
                 },
             )
         )
-    if server_config is not None:
-        get_logger().debug("run server with other workers in the same process")
-        server_constructor = server_config.pop("constructor")
-        workers.append(
-            server_constructor(
-                extra_kwargs={
-                    "task_id": task_id,
-                    "device_lock": device_lock,
-                },
-                extra_endpoint_kwargs={
-                    "topology": topology,
-                },
-            )
-        )
 
     get_logger().debug("run workers")
     gevent.joinall([gevent.spawn(worker.start) for worker in workers], raise_error=True)
     get_logger().debug("stop process")
-
-    res: dict = {}
-    for worker in workers:
-        if not hasattr(worker, "worker_id"):
-            # server
-            server = worker
-            if hasattr(server.algorithm, "shapley_values"):
-                res["sv"] = server.algorithm.shapley_values
-            res |= server.performance_stat[server.round_number - 1]
-            continue
-    return res
 
 
 tasks: dict = {}
@@ -93,25 +93,19 @@ def train(
     worker_config = get_worker_config(config, practitioner_ids=practitioner_ids)
     topology = worker_config.pop("topology")
     device_lock = multiprocessing.Manager().RLock()
-    task_id: int | None = None
-    if non_blocking:
-        task_id = uuid.uuid4().int
+    task_id = uuid.uuid4().int
     process_pool: TorchProcessPool = TorchProcessPool(
         initargs=[{"fun_kwargs": {"device_lock": device_lock, "topology": topology}}],
     )
-    server_config = worker_config.get("server", None)
-    process_pool.submit(
-        start_executors,
-        task_id=task_id,
-        worker_configs=[],
-        server_config=server_config,
-    )
     for worker_configs in worker_config["worker"].values():
-        server_config = None
         process_pool.submit(
-            start_executors,
+            start_workers, task_id=task_id, worker_configs=worker_configs
+        )
+    server_config = worker_config.get("server", None)
+    if server_config is not None:
+        process_pool.submit(
+            start_server,
             task_id=task_id,
-            worker_configs=worker_configs,
             server_config=server_config,
         )
     if non_blocking:
@@ -121,7 +115,8 @@ def train(
             "config": config,
         }
         return task_id
-    process_pool.shutdown()
+    process_pool.wait_results(timeout=None)
+    process_pool.shutdown(wait=True)
     get_logger().info("training use %s seconds", timer.elapsed_milliseconds() / 1000)
 
 
@@ -129,10 +124,10 @@ def get_training_result(task_id: int, timeout: None | float = None) -> None | di
     task = tasks[task_id]
     process_pool = task["process_pool"]
     results, not_done = process_pool.wait_results(timeout=timeout)
+    process_pool.shutdown()
     if not_done:
         return None
     tasks.pop(task_id)
-    process_pool.shutdown()
     tmp_stats: dict = {}
     for result in results.values():
         tmp_stats |= result
