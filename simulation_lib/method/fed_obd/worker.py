@@ -3,8 +3,8 @@ from typing import Any
 from cyy_naive_lib.log import get_logger
 from cyy_torch_toolbox.ml_type import ExecutorHookPoint
 
-from ..common_import import (AggregationWorker, DeltaParameterMessage, Message,
-                             ParameterMessage, QuantClientEndpoint)
+from ..common_import import (AggregationWorker, Message, ParameterMessage,
+                             QuantClientEndpoint)
 from .obd_algorithm import OpportunisticBlockDropoutAlgorithm
 from .phase import Phase
 
@@ -16,7 +16,9 @@ class FedOBDWorker(AggregationWorker, OpportunisticBlockDropoutAlgorithm):
     def __init__(self, *args, **kwargs):
         AggregationWorker.__init__(self, *args, **kwargs)
         OpportunisticBlockDropoutAlgorithm.__init__(
-            self, dropout_rate=self.config.algorithm_kwargs["dropout_rate"]
+            self,
+            dropout_rate=self.config.algorithm_kwargs["dropout_rate"],
+            worker_id=self.worker_id,
         )
         assert isinstance(self._endpoint, QuantClientEndpoint)
         self._endpoint.dequant_server_data = True
@@ -30,7 +32,7 @@ class FedOBDWorker(AggregationWorker, OpportunisticBlockDropoutAlgorithm):
             get_logger().warning("switch to phase 2")
             self._reuse_learning_rate = True
             self._send_parameter_diff = True
-            self._disable_choose_model_by_validation()
+            self.disable_choose_model_by_validation()
             self.trainer.hyper_parameter.epoch = self.config.algorithm_kwargs[
                 "second_phase_epoch"
             ]
@@ -47,7 +49,7 @@ class FedOBDWorker(AggregationWorker, OpportunisticBlockDropoutAlgorithm):
         if self.__phase == Phase.STAGE_TWO:
             executor = kwargs["executor"]
             if kwargs["epoch"] == executor.hyper_parameter.epoch:
-                sent_data.other_data["final_aggregation"] = True
+                sent_data.end_training = True
                 self.__end_training = True
         super()._aggregation(sent_data=sent_data, **kwargs)
 
@@ -63,10 +65,8 @@ class FedOBDWorker(AggregationWorker, OpportunisticBlockDropoutAlgorithm):
                 model_util=self.trainer.model_util,
                 model_cache=self._model_cache,
             )
-            return DeltaParameterMessage(
-                delta_parameter=self._model_cache.get_parameter_diff(block_parameter),
-                other_data=data.other_data,
-            )
+            data.parameter = self._model_cache.get_parameter_diff(block_parameter)
+            return data
 
         data.in_round = True
         data.other_data["check_acc"] = True

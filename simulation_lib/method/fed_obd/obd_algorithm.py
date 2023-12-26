@@ -23,13 +23,12 @@ def get_module_blocks(
 
 
 class OpportunisticBlockDropoutAlgorithm:
-    __print_blocks = False
-
-    def __init__(self, dropout_rate: float):
+    def __init__(self, dropout_rate: float, worker_id: int):
         self.__dropout_rate = dropout_rate
         get_logger().warning("use dropout rate %s", self.__dropout_rate)
         self.__blocks: list | None = None
         self.__parameter_num: int = 0
+        self.__worker_id = worker_id
 
     def __find_blocks(self, model_util: ModelUtil) -> None:
         self.__blocks = get_module_blocks(model_util)
@@ -52,11 +51,10 @@ class OpportunisticBlockDropoutAlgorithm:
                     break
             if remain:
                 self.__blocks.append([(submodule_name, submodule)])
-                if not self.__print_blocks:
+                if self.__worker_id == 0:
                     get_logger().info("identify a submodule:%s", submodule_name)
 
-        if not self.__print_blocks:
-            OpportunisticBlockDropoutAlgorithm.__print_blocks = False
+        if self.__worker_id == 0:
             get_logger().info("identify these blocks in model:")
             for block in self.__blocks:
                 get_logger().info(

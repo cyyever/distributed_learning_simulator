@@ -32,7 +32,7 @@ class FedOBDServer(AggregationServer):
             self._compute_stat = True
         if "check_acc" in result.other_data:
             self._compute_stat = True
-        if "final_aggregation" in result.other_data:
+        if result.end_training:
             self.__phase = Phase.END
         match self.__phase:
             case Phase.STAGE_ONE:
@@ -45,9 +45,9 @@ class FedOBDServer(AggregationServer):
             case Phase.STAGE_TWO:
                 if self.early_stop and not self.__has_improvement():
                     get_logger().warning("stop aggregation")
-                    result.other_data["end_training"] = True
+                    result.end_training = True
             case Phase.END:
-                result.other_data["end_training"] = True
+                pass
             case _:
                 raise NotImplementedError(f"unknown phase {self.__phase}")
         return result

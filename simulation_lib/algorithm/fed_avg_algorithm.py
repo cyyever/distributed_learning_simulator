@@ -76,6 +76,7 @@ class FedAVGAlgorithm(AggregationAlgorithm):
         self.__total_weights = {}
         return ParameterMessage(
             parameter=parameter,
+            end_training=next(iter(self._all_worker_data.values())).end_training,
             other_data=self.__check_and_reduce_other_data(self._all_worker_data),
         )
 
@@ -83,11 +84,13 @@ class FedAVGAlgorithm(AggregationAlgorithm):
     def _aggregate_worker_data(
         cls, all_worker_data: dict[int, ParameterMessage]
     ) -> ParameterMessage:
+        assert all_worker_data
         assert isinstance(next(iter(all_worker_data.values())), ParameterMessage)
         parameter = AggregationAlgorithm.weighted_avg(
             all_worker_data,
             AggregationAlgorithm.get_ratios(all_worker_data),
         )
+        assert parameter
         return ParameterMessage(
             parameter=parameter,
             other_data=cls.__check_and_reduce_other_data(all_worker_data),
