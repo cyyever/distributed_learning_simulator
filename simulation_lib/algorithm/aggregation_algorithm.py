@@ -17,8 +17,11 @@ class AggregationAlgorithm:
     ) -> dict[int, float]:
         if key_name is None:
             total_scalar = sum(v.dataset_size for v in data_dict.values())
-        else:
-            total_scalar = sum(v.other_data[key_name] for v in data_dict.values())
+            return {
+                k: float(v.dataset_size) / float(total_scalar)
+                for k, v in data_dict.items()
+            }
+        total_scalar = sum(v.other_data[key_name] for v in data_dict.values())
         return {
             k: float(v.other_data[key_name]) / float(total_scalar)
             for k, v in data_dict.items()
@@ -30,13 +33,14 @@ class AggregationAlgorithm:
         data_dict: dict[int, ParameterMessage],
         weight_dict: dict[int, float],
     ) -> TensorDict:
+        assert data_dict
         avg_data: TensorDict = {}
         for worker_id, v in data_dict.items():
             ratio = weight_dict[worker_id]
             assert 0 <= ratio <= 1
 
             d = {k2: v2 * ratio for (k2, v2) in v.parameter.items()}
-            if avg_data is None:
+            if not avg_data:
                 avg_data = d
             else:
                 for k in avg_data:
