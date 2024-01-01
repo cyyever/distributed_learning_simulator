@@ -36,7 +36,7 @@ class FedOBDServer(AggregationServer):
             self.__phase = Phase.END
         match self.__phase:
             case Phase.STAGE_ONE:
-                if self.round_number >= self.config.round or (
+                if self.round_index >= self.config.round or (
                     self.early_stop and not self.__has_improvement()
                 ):
                     get_logger().warning("switch to phase 2")

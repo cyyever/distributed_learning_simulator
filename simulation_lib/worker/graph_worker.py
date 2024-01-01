@@ -35,6 +35,7 @@ class GraphWorker(AggregationWorker):
         self._in_client_training_edge_cnt: int = 0
         self._cross_client_training_edge_cnt: int = 0
         self._recorded_model_size: dict = {}
+        self._send_parameter_diff = False
 
     def get_dataset_util(self, phase) -> GraphDatasetUtil:
         util = self.trainer.dataset_collection.get_dataset_util(phase=phase)
@@ -87,9 +88,9 @@ class GraphWorker(AggregationWorker):
         super()._before_training()
         if self.worker_id == 0:
             if self._share_feature:
-                get_logger().warning("share feature")
+                get_logger().info("share feature")
             else:
-                get_logger().warning("not share feature")
+                get_logger().info("not share feature")
         self.__exchange_training_node_indices()
         self.__clear_unrelated_edges()
         self.trainer.update_dataloader_kwargs(
@@ -207,16 +208,14 @@ class GraphWorker(AggregationWorker):
         )
         if edge_drop_rate is not None and edge_drop_rate != 0:
             if self.worker_id == 0:
-                get_logger().warning(
-                    "drop in client edge with rate: %s", edge_drop_rate
-                )
+                get_logger().info("drop in client edge with rate: %s", edge_drop_rate)
             dropout_mask = torch.bernoulli(
                 torch.full(new_in_client_edge_mask.size(), 1 - edge_drop_rate)
             ).to(dtype=torch.bool)
             new_in_client_edge_mask &= dropout_mask
 
         if new_in_client_edge_mask.sum().item() != 0:
-            get_logger().warning(
+            get_logger().info(
                 "cross_client_edge/in_client_edge %s",
                 self.cross_client_edge_mask.sum().item()
                 / new_in_client_edge_mask.sum().item(),
@@ -363,7 +362,11 @@ class GraphWorker(AggregationWorker):
         self._comunicated_batch_cnt += 1
         self._communicated_embedding_bytes += cnt * x[0].shape[0] * x.element_size()
         self.send_data_to_server(sent_data)
+        # if self.config.limited_resource:
+        #     self._offload_from_device(in_round=True)
         res = self._get_data_from_server()
+        if self.config.limited_resource:
+            pass
         assert res is not None
 
         new_x = self._get_cross_deivce_embedding(
@@ -382,10 +385,10 @@ class GraphWorker(AggregationWorker):
     def _get_sent_data(self) -> ParameterMessageBase:
         sent_data = super()._get_sent_data()
         self._aggregated_bytes += get_message_size(sent_data)
-        self._round_communicated_bytes[self._round_num] = (
+        self._round_communicated_bytes[self._round_index] = (
             self._aggregated_bytes + self._communicated_embedding_bytes
         )
-        self._round_skipped_bytes[self._round_num] = self._skipped_embedding_bytes
+        self._round_skipped_bytes[self._round_index] = self._skipped_embedding_bytes
         return sent_data
 
     def _after_training(self) -> None:

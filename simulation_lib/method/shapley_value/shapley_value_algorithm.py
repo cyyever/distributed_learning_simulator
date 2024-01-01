@@ -34,25 +34,25 @@ class ShapleyValueAlgorithm(FedAVGAlgorithm):
 
     def aggregate_worker_data(self) -> Message:
         if self.sv_algorithm is None:
-            assert self._server.round_number == 1
+            assert self._server.round_index == 1
             self.sv_algorithm = self.sv_algorithm_cls(
                 players=self._get_players(),
                 last_round_metric=self._server.performance_stat[
-                    self._server.round_number - 1
+                    self._server.round_index - 1
                 ][f"test_{self.metric_type}"],
             )
         assert self.sv_algorithm is not None
         self.sv_algorithm.set_metric_function(self._get_subset_metric)
-        self.sv_algorithm.compute(round_number=self._server.round_number)
-        self.shapley_values[self._server.round_number] = copy.deepcopy(
+        self.sv_algorithm.compute(round_number=self._server.round_index)
+        self.shapley_values[self._server.round_index] = copy.deepcopy(
             self._convert_shapley_values(self.sv_algorithm.shapley_values)
         )
-        self.shapley_values_S[self._server.round_number] = self._convert_shapley_values(
+        self.shapley_values_S[self._server.round_index] = self._convert_shapley_values(
             self.sv_algorithm.shapley_values_S
         )
         if self.choose_best_subset:
             best_subset: set = set(
-                self.shapley_values_S[self._server.round_number].keys()
+                self.shapley_values_S[self._server.round_index].keys()
             )
             if best_subset:
                 get_logger().warning("use subset %s", best_subset)

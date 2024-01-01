@@ -27,7 +27,7 @@ class Worker(Executor):
         super().__init__(name=name, **kwargs)
         self.__practitioner: Practitioner = practitioner
         self._endpoint = endpoint
-        self._round_num = 0
+        self._round_index = 0
         self._force_stop = False
 
     @property
@@ -55,11 +55,11 @@ class Worker(Executor):
             )
 
     def _stopped(self) -> bool:
-        return self._round_num > self.config.round or self._force_stop
+        return self._round_index > self.config.round or self._force_stop
 
     def start(self, **kwargs: Any) -> None:
         first_training: bool = True
-        self._round_num = 1
+        self._round_index = 1
         self._force_stop = False
         while not self._stopped():
             # in case worker changes round number
@@ -82,11 +82,11 @@ class Worker(Executor):
                 else:
                     self.trainer.hook_config.summarize_executor = False
                 self.trainer.disable_hook("batch_loss_logger")
-                self.trainer.set_visualizer_prefix(prefix=f"round: {self._round_num},")
+                self.trainer.set_visualizer_prefix(prefix=f"round: {self._round_index},")
                 self.trainer.train(
                     **kwargs,
                 )
-                self._round_num += 1
+                self._round_index += 1
         with self._get_execution_context():
             get_logger().debug("finish worker")
             self._endpoint.close()

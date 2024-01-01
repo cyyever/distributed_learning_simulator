@@ -23,6 +23,7 @@ class FedOBDWorker(AggregationWorker, OpportunisticBlockDropoutAlgorithm):
         assert isinstance(self._endpoint, QuantClientEndpoint)
         self._endpoint.dequant_server_data = True
         self._send_parameter_diff = False
+        self._keep_model_cache = True
 
     def _load_result_from_server(self, result: Message) -> None:
         if "phase_two" in result.other_data:
@@ -36,10 +37,7 @@ class FedOBDWorker(AggregationWorker, OpportunisticBlockDropoutAlgorithm):
             self.trainer.hyper_parameter.epoch = self.config.algorithm_kwargs[
                 "second_phase_epoch"
             ]
-            self.config.round = self._round_num + 1
-            get_logger().warning(
-                "change epoch to %s", self.trainer.hyper_parameter.epoch
-            )
+            self.config.round = self._round_index + 1
             self._aggregation_time = ExecutorHookPoint.AFTER_EPOCH
             self._register_aggregation()
 
@@ -51,12 +49,15 @@ class FedOBDWorker(AggregationWorker, OpportunisticBlockDropoutAlgorithm):
             if kwargs["epoch"] == executor.hyper_parameter.epoch:
                 sent_data.end_training = True
                 self.__end_training = True
+                get_logger().debug("end training")
         super()._aggregation(sent_data=sent_data, **kwargs)
 
     def _stopped(self) -> bool:
         return self.__end_training
 
     def _get_sent_data(self):
+        assert self._model_cache is not None
+        assert self._keep_model_cache
         data = super()._get_sent_data()
         if self.__phase == Phase.STAGE_ONE:
             assert isinstance(data, ParameterMessage)

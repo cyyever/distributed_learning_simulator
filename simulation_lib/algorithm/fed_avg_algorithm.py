@@ -64,26 +64,28 @@ class FedAVGAlgorithm(AggregationAlgorithm):
 
     def aggregate_worker_data(self) -> Message:
         if not self.accumulate:
-            return self._aggregate_worker_data(self._all_worker_data)
-        assert self.__parameter
-        parameter = self.__parameter
-        self.__parameter = {}
-        for k, v in parameter.items():
-            parameter[k] = self._apply_total_weight(
-                name=k, parameter=v, total_weight=self.__total_weights[k]
-            ).to(dtype=self.__dtypes[k])
-            assert not parameter[k].isnan().any().cpu()
-        self.__total_weights = {}
+            parameter = self._aggregate_worker_data(self._all_worker_data)
+        else:
+            assert self.__parameter
+            parameter = self.__parameter
+            self.__parameter = {}
+            for k, v in parameter.items():
+                parameter[k] = self._apply_total_weight(
+                    name=k, parameter=v, total_weight=self.__total_weights[k]
+                ).to(dtype=self.__dtypes[k])
+                assert not parameter[k].isnan().any().cpu()
+            self.__total_weights = {}
         return ParameterMessage(
             parameter=parameter,
             end_training=next(iter(self._all_worker_data.values())).end_training,
+            in_round=next(iter(self._all_worker_data.values())).in_round,
             other_data=self.__check_and_reduce_other_data(self._all_worker_data),
         )
 
     @classmethod
     def _aggregate_worker_data(
         cls, all_worker_data: dict[int, ParameterMessage]
-    ) -> ParameterMessage:
+    ) -> TensorDict:
         assert all_worker_data
         assert isinstance(next(iter(all_worker_data.values())), ParameterMessage)
         parameter = AggregationAlgorithm.weighted_avg(
@@ -91,10 +93,7 @@ class FedAVGAlgorithm(AggregationAlgorithm):
             AggregationAlgorithm.get_ratios(all_worker_data),
         )
         assert parameter
-        return ParameterMessage(
-            parameter=parameter,
-            other_data=cls.__check_and_reduce_other_data(all_worker_data),
-        )
+        return parameter
 
     @classmethod
     def __check_and_reduce_other_data(cls, all_worker_data: dict) -> dict:

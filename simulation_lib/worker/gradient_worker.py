@@ -1,131 +1,93 @@
-import json
-import os
+from typing import Any, Callable
 
 import torch
 from cyy_torch_toolbox.ml_type import ExecutorHookPoint
-from cyy_torch_toolbox.tensor import (cat_tensors_to_vector,
-                                      decompose_tensor_to_list)
-from torch.optim.sgd import SGD
+from cyy_torch_toolbox.model.evaluator import ModelEvaluator
+from cyy_torch_toolbox.tensor import tensor_to
+from cyy_torch_toolbox.typing import TensorDict
 
+from ..message import Message, ParameterMessage
 from .client import Client
 
 
-def compute_gradient(
-    params,
-    d_p_list,
-    weight_decay: float,
-) -> list:
-    real_gradient = []
-    for i, param in enumerate(params):
-        d_p = d_p_list[i]
-        if weight_decay != 0:
-            d_p = d_p.add(param, alpha=weight_decay)
-        real_gradient.append(d_p)
+class GradientModelEvaluator:
+    def __init__(
+        self,
+        evaluator: ModelEvaluator,
+        gradient_fun: Callable,
+        aggregation_indicator_fun: Callable,
+    ) -> None:
+        assert torch.cuda.is_available()
+        self.evaluator: ModelEvaluator = evaluator
+        self.__gradient_fun: Callable = gradient_fun
+        self.__aggregation_indicator_fun: Callable = aggregation_indicator_fun
 
-    assert len(real_gradient) == len(params)
-    return real_gradient
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        return self.evaluator.__call__(*args, **kwargs)
+
+    def __getattr__(self, name):
+        if name in ("evaluator", "gradient_fun"):
+            raise AttributeError()
+        return getattr(self.evaluator, name)
+
+    def backward_and_step(
+        self,
+        loss,
+        optimizer: torch.optim.Optimizer,
+        **backward_kwargs,
+    ) -> None:
+        self.backward(loss=loss, optimizer=optimizer, **backward_kwargs)
+        optimizer.step()
+
+    def backward(
+        self,
+        loss,
+        optimizer: torch.optim.Optimizer,
+        **backward_kwargs,
+    ) -> Any:
+        self.evaluator.backward(loss=loss, optimizer=optimizer, **backward_kwargs)
+        if not self.__aggregation_indicator_fun():
+            return
+        gradient_dict: TensorDict = self.__gradient_fun(
+            self.evaluator.model_util.get_gradient_dict()
+        )
+        self.evaluator.model_util.load_gradient_dict(
+            tensor_to(gradient_dict, device=loss.device)
+        )
 
 
 class GradientWorker(Client):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        assert isinstance(self.trainer.get_optimizer(), SGD)
-        self.__epoch_stat = {}
-        self.trainer.append_named_hook(
-            ExecutorHookPoint.OPTIMIZER_STEP, "step", self.__step
-        )
-        self.trainer.append_named_hook(
-            ExecutorHookPoint.AFTER_EPOCH, "record", self.__record
-        )
-        self.trainer.append_named_hook(
-            ExecutorHookPoint.AFTER_EXECUTE, "report_end", self.__report_end
-        )
-
-    def __report_end(self, **kwargs):
-        self.send_data_to_server({"end_training": True})
-
-    def _process_gradient(self, gradient):
-        return gradient
-
-    def __step(self, executor):
-        trainer = executor
-        optimizer = trainer.get_optimizer()
-        if hasattr(optimizer, "_step_count"):
-            optimizer._step_count += 1
-
-        assert len(optimizer.param_groups) == 1
-        for group in optimizer.param_groups:
-            params_with_grad = []
-            d_p_list = []
-            momentum_buffer_list = []
-            with torch.no_grad():
-                weight_decay = group["weight_decay"]
-                momentum = group["momentum"]
-                dampening = group["dampening"]
-                nesterov = group["nesterov"]
-                lr = group["lr"]
-                for p in group["params"]:
-                    if p.grad is not None:
-                        params_with_grad.append(p)
-                        d_p_list.append(p.grad)
-
-                        state = optimizer.state[p]
-                        if "momentum_buffer" not in state:
-                            momentum_buffer_list.append(None)
-                        else:
-                            momentum_buffer_list.append(state["momentum_buffer"])
-
-                gradient_list = compute_gradient(
-                    params_with_grad,
-                    d_p_list,
-                    weight_decay,
-                )
-            gradient_shape = [p.shape for p in gradient_list]
-
-            gradient = self._process_gradient(cat_tensors_to_vector(gradient_list))
-            self.send_data_to_server(
-                {"dataset_size": self.trainer.dataset_size, "gradient": gradient}
+        self.__cnt = 0
+        self.__aggregation_interval = self.config.algorithm_kwargs.get("interval", 1)
+        self.trainer.replace_model_evaluator(
+            lambda evaluator: GradientModelEvaluator(
+                evaluator=evaluator,
+                gradient_fun=self._process_gradient,
+                aggregation_indicator_fun=self._should_aggregate,
             )
-            result = self._get_data_from_server()
-            assert result is not None
-            gradient = result["gradient"]
-            gradient_list = decompose_tensor_to_list(
-                shapes=gradient_shape, tensor=gradient
+        )
+        self.trainer.append_named_hook(
+            ExecutorHookPoint.AFTER_EXECUTE, "end_training", self.__report_end
+        )
+
+    def __report_end(self, **kwargs: Any) -> None:
+        self.send_data_to_server(Message(end_training=True))
+
+    def _should_aggregate(self) -> bool:
+        res = self.__cnt % self.__aggregation_interval
+        self.__cnt += 1
+        return res
+
+    def _process_gradient(self, gradient_dict: TensorDict) -> TensorDict:
+        self.send_data_to_server(
+            ParameterMessage(
+                parameter=gradient_dict,
+                in_round=True,
+                dataset_size=self.trainer.dataset_size,
             )
-
-            with torch.no_grad():
-                for d_p, param, momentum_buffer in zip(
-                    gradient_list, params_with_grad, momentum_buffer_list
-                ):
-                    d_p = d_p.to(param.device)
-                    if momentum != 0:
-                        buf = momentum_buffer
-                        if buf is None:
-                            buf = d_p.detach()
-                            momentum_buffer = buf
-                        else:
-                            buf.mul_(momentum).add_(d_p, alpha=1 - dampening)
-
-                        if nesterov:
-                            d_p = d_p.add(buf, alpha=momentum)
-                        else:
-                            d_p = buf
-                    param.add_(d_p, alpha=-lr)
-                    # update momentum_buffers in state
-                    state = optimizer.state[param]
-                    state["momentum_buffer"] = momentum_buffer
-
-    def __record(self, **kwargs):
-        epoch = kwargs["epoch"]
-        trainer = kwargs["executor"]
-        self.__epoch_stat[epoch] = {}
-        self.__epoch_stat[epoch]["loss"] = trainer.performance_metric.get_loss(
-            epoch
-        ).data.item()
-        self.__epoch_stat[epoch]["accuracy"] = trainer.performance_metric.get_accuracy(
-            epoch
-        ).data.item()
-        with open(
-            os.path.join(self.config.save_dir, "epoch_stat.json"), "wt", encoding="utf8"
-        ) as f:
-            json.dump(self.__epoch_stat, f)
+        )
+        result = self._get_data_from_server()
+        assert isinstance(result, ParameterMessage)
+        return result.parameter

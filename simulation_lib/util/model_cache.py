@@ -24,9 +24,6 @@ class ModelCache:
         self.__parameter_dict.set_data(tensor_to(parameter_dict, device="cpu"))
         self.__parameter_dict.set_data_path(path)
 
-    # def discard(self) -> None:
-    #     self.__parameter_dict.set_data(None)
-
     def get_parameter_diff(
         self, new_parameter_dict: ParameterDictType
     ) -> ParameterDictType:
@@ -36,11 +33,13 @@ class ModelCache:
         }
 
     def add_parameter_diff(self, parameter_diff: ParameterDictType, path: str) -> None:
-        self.__parameter_dict.save()
         self.__parameter_dict.set_data_path(path)
         for k, v in self.parameter_dict.items():
             self.parameter_dict[k] = v + tensor_to(parameter_diff[k], device="cpu")
         self.__parameter_dict.mark_new_data()
+
+    def discard(self) -> None:
+        self.__parameter_dict.clear()
 
     def save(self) -> None:
         self.__parameter_dict.save()

@@ -16,6 +16,7 @@ class Message:
 
 @dataclass(kw_only=True)
 class ParameterMessageBase(Message):
+    is_initial: bool = False
     dataset_size: int = 0
 
 

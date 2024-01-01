@@ -9,7 +9,7 @@ from ..message import DeltaParameterMessage, Message, ParameterMessage
 class AggregationAlgorithm:
     def __init__(self) -> None:
         self._all_worker_data: dict[int, Message] = {}
-        self._skipped_workers: set[int] = set()
+        self.__skipped_workers: set[int] = set()
 
     @classmethod
     def get_ratios(
@@ -78,7 +78,7 @@ class AggregationAlgorithm:
         save_dir: str,
     ) -> None:
         if worker_data is None:
-            self._skipped_workers.add(worker_id)
+            self.__skipped_workers.add(worker_id)
             return
         self._all_worker_data[worker_id] = self.__process_worker_data(
             worker_data=worker_data,
@@ -90,7 +90,7 @@ class AggregationAlgorithm:
 
     def clear_worker_data(self) -> None:
         self._all_worker_data.clear()
-        self._skipped_workers.clear()
+        self.__skipped_workers.clear()
 
     def exit(self) -> None:
         pass

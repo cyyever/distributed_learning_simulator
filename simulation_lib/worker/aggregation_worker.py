@@ -20,12 +20,16 @@ class AggregationWorker(Client):
         self._reuse_learning_rate: bool = False
         self.__choose_model_by_validation: bool = False
         self._send_parameter_diff: bool = True
-        self._model_cache: ModelCache = ModelCache()
+        self._keep_model_cache: bool = False
+        self._model_cache: ModelCache | None = ModelCache()
 
     def _before_training(self) -> None:
         super()._before_training()
         self.trainer.dataset_collection.remove_dataset(phase=MachineLearningPhase.Test)
-        if self.config.dataset_sampling == "iid":
+        if (
+            self.config.hyper_parameter_config.epoch > 1
+            and self.config.dataset_sampling == "iid"
+        ):
             self.enable_choose_model_by_validation()
         if not self.__choose_model_by_validation:
             # Skip Validation to speed up training
@@ -87,10 +91,15 @@ class AggregationWorker(Client):
         else:
             parameter = self.trainer.model_util.get_parameter_dict()
         if self._send_parameter_diff:
-            return DeltaParameterMessage(
+            assert self._model_cache is not None
+            res = DeltaParameterMessage(
                 dataset_size=self.trainer.dataset_size,
                 delta_parameter=self._model_cache.get_parameter_diff(parameter),
             )
+            if not self._keep_model_cache:
+                self._model_cache.discard()
+                self._model_cache = ModelCache()
+            return res
         return ParameterMessage(
             dataset_size=self.trainer.dataset_size, parameter=parameter
         )
@@ -100,32 +109,39 @@ class AggregationWorker(Client):
             self._force_stop = True
             raise StopExecutingException()
         model_path = os.path.join(
-            self.config.save_dir, "aggregated_model", f"round_{self._round_num}.pk"
+            self.save_dir, "aggregated_model", f"round_{self._round_index}.pk"
         )
+        parameter_dict = {}
         match result:
             case ParameterMessage():
-                self._model_cache.cache_parameter_dict(
-                    result.parameter, path=model_path
-                )
+                parameter_dict = result.parameter
+                if self._model_cache is not None:
+                    self._model_cache.cache_parameter_dict(
+                        result.parameter, path=model_path
+                    )
             case DeltaParameterMessage():
+                assert self._model_cache is not None
                 self._model_cache.add_parameter_diff(
                     result.delta_parameter, path=model_path
                 )
+                parameter_dict = self._model_cache.parameter_dict
             case _:
                 raise NotImplementedError()
-            # case ParameterFileMessage():
-            #     self._model_cache.load_file(result.path)
         load_parameters(
             trainer=self.trainer,
-            parameter_dict=self._model_cache.parameter_dict,
+            parameter_dict=parameter_dict,
             reuse_learning_rate=self._reuse_learning_rate,
         )
 
-    def _offload_from_device(self) -> None:
-        if self.config.limited_resource:
-            self._model_cache.save()
-
+    def _offload_from_device(self, in_round: bool = False) -> None:
+        if self._model_cache is not None:
+            if self._keep_model_cache:
+                self._model_cache.save()
+            else:
+                self._model_cache.discard()
+                self._model_cache = ModelCache()
         if self.best_model_hook is not None:
+            assert not in_round
             self.best_model_hook.clear()
         super()._offload_from_device()
 
@@ -134,8 +150,8 @@ class AggregationWorker(Client):
             result = super()._get_data_from_server()
             get_logger().debug("get result from server %s", type(result))
             if result is None:
-                get_logger().debug("skip round %s", self._round_num)
-                self._round_num += 1
+                get_logger().debug("skip round %s", self._round_index)
+                self._round_index += 1
                 self.send_data_to_server(None)
                 if self._stopped():
                     return
