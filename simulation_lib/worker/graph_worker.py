@@ -9,7 +9,6 @@ import torch_geometric.utils
 from cyy_naive_lib.log import get_logger
 from cyy_torch_graph import GraphDatasetUtil
 from cyy_torch_toolbox.ml_type import MachineLearningPhase
-from cyy_torch_toolbox.tensor import tensor_to
 
 from ..message import Message, ParameterMessageBase, get_message_size
 from .aggregation_worker import AggregationWorker
@@ -23,6 +22,7 @@ class GraphWorker(AggregationWorker):
         self._other_training_node_indices: set = set()
         self.__old_edge_index: None | torch.Tensor = None
         self.__n_id: None | torch.Tensor = None
+        self.__local_node_mask: None | torch.Tensor = None
         self._hook_handles: dict = {}
         self._comunicated_batch_cnt: int = 0
         self._skipped_embedding_bytes: int = 0
@@ -30,7 +30,6 @@ class GraphWorker(AggregationWorker):
         self._communicated_embedding_bytes: int = 0
         self._aggregated_bytes: int = 0
         self._round_communicated_bytes: dict = {}
-        self.__local_node_mask: None | torch.Tensor = None
         self._original_in_client_training_edge_cnt: int = 0
         self._in_client_training_edge_cnt: int = 0
         self._cross_client_training_edge_cnt: int = 0
@@ -48,23 +47,28 @@ class GraphWorker(AggregationWorker):
             phase=MachineLearningPhase.Training
         ).get_edge_index(graph_index=0)
 
-    def __get_local_edge_index(self) -> torch.Tensor:
-        edge_mask = self.__get_local_edge_mask(edge_index=self.edge_index)
-        return torch_geometric.utils.coalesce(self.edge_index[:, edge_mask])
-
-    def __get_local_edge_mask(self, edge_index) -> torch.Tensor:
+    def __get_local_edge_mask(self, edge_index: torch.Tensor) -> torch.Tensor:
         if self.__local_node_mask is None:
             if self.validation_node_mask is not None:
-                local_node_mask = self.training_node_mask | self.validation_node_mask
+                self.__local_node_mask = (
+                    self.training_node_mask | self.validation_node_mask
+                )
             else:
-                local_node_mask = self.training_node_mask
-            self.__local_node_mask = tensor_to(
-                local_node_mask, device=edge_index.device
-            )
+                self.__local_node_mask = self.training_node_mask
+        if self.__local_node_mask.device != edge_index.device:
+            self.__local_node_mask = self.__local_node_mask.to(device=edge_index.device)
         return (
             self.__local_node_mask[edge_index[0]]
             & self.__local_node_mask[edge_index[1]]
         )
+
+    def __get_local_edge_index(
+        self, edge_index: torch.Tensor | None = None
+    ) -> torch.Tensor:
+        if edge_index is None:
+            edge_index = self.edge_index
+        edge_mask = self.__get_local_edge_mask(edge_index=edge_index)
+        return torch_geometric.utils.coalesce(edge_index[:, edge_mask])
 
     def __exchange_training_node_indices(self) -> None:
         sent_data = Message(
@@ -93,16 +97,9 @@ class GraphWorker(AggregationWorker):
                 get_logger().info("not share feature")
         self.__exchange_training_node_indices()
         self.__clear_unrelated_edges()
-        self.trainer.update_dataloader_kwargs(
-            batch_number=self.config.algorithm_kwargs["batch_number"]
-        )
-        if "num_neighbor" in self.config.algorithm_kwargs:
-            self.trainer.update_dataloader_kwargs(
-                num_neighbor=self.config.algorithm_kwargs["num_neighbor"]
-            )
-        for idx, module in enumerate(self._get_message_passing_modules()):
+        for module in self._get_message_passing_modules():
             module.register_forward_pre_hook(
-                hook=functools.partial(self._record_embedding_size, module_index=idx),
+                hook=self._record_embedding_size,
                 with_kwargs=True,
                 prepend=False,
             )
@@ -118,18 +115,19 @@ class GraphWorker(AggregationWorker):
             )
             break
         for idx, _ in enumerate(self._get_message_passing_modules()):
-            hook: Callable = self._pass_node_feature
             if idx == 0:
-                hook = functools.partial(
-                    self._clear_cross_client_edge_on_the_fly, module_index=idx
+                self._register_embedding_hook(
+                    module_index=idx, hook=self._clear_cross_client_edge_on_the_fly
                 )
-            self._register_embedding_hook(module_index=idx, hook=hook)
+            else:
+                self._register_embedding_hook(
+                    module_index=idx, hook=self._pass_node_feature
+                )
 
     def _register_embedding_hook(self, module_index: int, hook: Callable) -> None:
         old_hook = self._hook_handles.pop(module_index, None)
         if old_hook is not None:
             old_hook.remove()
-        hook = functools.partial(hook, module_index=module_index)
         self._hook_handles[module_index] = self._get_message_passing_modules()[
             module_index
         ].register_forward_pre_hook(
@@ -178,14 +176,6 @@ class GraphWorker(AggregationWorker):
         return self.__n_id
 
     @property
-    def in_client_edge_mask(self) -> torch.Tensor:
-        edge_index = self.edge_index
-        return (
-            self.training_node_mask[edge_index[0]]
-            & self.training_node_mask[edge_index[1]]
-        )
-
-    @property
     def cross_client_edge_mask(self) -> torch.Tensor:
         edge_index = self.edge_index
         return (self.training_node_mask[edge_index[0]]) & (
@@ -199,10 +189,14 @@ class GraphWorker(AggregationWorker):
         assert self._other_training_node_indices
         # Keep in-device edges and cross-device edges
         edge_index = self.edge_index
-        self._original_in_client_training_edge_cnt = int(
-            self.in_client_edge_mask.sum().item()
+        training_edge_mask = (
+            self.get_dataset_util(phase=MachineLearningPhase.Training)
+            .get_edge_masks()[0]
+            .clone()
         )
-        new_in_client_edge_mask = self.in_client_edge_mask.clone()
+        self._original_in_client_training_edge_cnt = int(
+            training_edge_mask.sum().item()
+        )
         edge_drop_rate: float | None = self.config.algorithm_kwargs.get(
             "edge_drop_rate", None
         )
@@ -210,21 +204,21 @@ class GraphWorker(AggregationWorker):
             if self.worker_id == 0:
                 get_logger().info("drop in client edge with rate: %s", edge_drop_rate)
             dropout_mask = torch.bernoulli(
-                torch.full(new_in_client_edge_mask.size(), 1 - edge_drop_rate)
+                torch.full(training_edge_mask.size(), 1 - edge_drop_rate)
             ).to(dtype=torch.bool)
-            new_in_client_edge_mask &= dropout_mask
+            training_edge_mask &= dropout_mask
 
-        if new_in_client_edge_mask.sum().item() != 0:
+        if training_edge_mask.sum().item() != 0:
             get_logger().info(
                 "cross_client_edge/in_client_edge %s",
                 self.cross_client_edge_mask.sum().item()
-                / new_in_client_edge_mask.sum().item(),
+                / training_edge_mask.sum().item(),
             )
         self._cross_client_training_edge_cnt = int(
             self.cross_client_edge_mask.sum().item()
         )
-        self._in_client_training_edge_cnt = int(new_in_client_edge_mask.sum().item())
-        edge_mask = new_in_client_edge_mask | self.cross_client_edge_mask
+        self._in_client_training_edge_cnt = int(training_edge_mask.sum().item())
+        edge_mask = training_edge_mask | self.cross_client_edge_mask
         if self.validation_node_mask is not None:
             validation_edge_mask = (
                 self.validation_node_mask[edge_index[0]]
@@ -249,7 +243,7 @@ class GraphWorker(AggregationWorker):
         )
 
     def _clear_cross_client_edge_on_the_fly(
-        self, module: torch.nn.Module, args: Any, kwargs: Any, module_index: int
+        self, module: torch.nn.Module, args: Any, kwargs: Any
     ) -> tuple | None:
         if not module.training:
             return None
@@ -259,11 +253,10 @@ class GraphWorker(AggregationWorker):
         edge_mask = self.__get_local_edge_mask(edge_index=edge_index)
         args = list(args)
         args[1] = self.__old_edge_index[:, edge_mask]
-        if module_index > 0:
-            x = args[0]
-            cnt = len(self.training_node_boundary.intersection(set(self.n_id.tolist())))
-            assert len(x.shape) == 2
-            self._skipped_embedding_bytes += x.shape[1] * x.element_size() * cnt
+        x = args[0]
+        cnt = len(self.training_node_boundary.intersection(set(self.n_id.tolist())))
+        assert len(x.shape) == 2
+        self._skipped_embedding_bytes += x.shape[1] * x.element_size() * cnt
 
         return tuple(args), kwargs
 
@@ -306,12 +299,6 @@ class GraphWorker(AggregationWorker):
                     embedding_mask[embedding_indices[node_idx]] = True
                 else:
                     mask2[idx] = True
-        # get_logger().error(
-        #     "embedding_indices %s mask1 %s mask2 %s",
-        #     len(embedding_indices),
-        #     mask1.sum(),
-        #     mask2.sum(),
-        # )
         new_x[mask1[:, 0]] = embedding[embedding_mask].to(
             new_x.device, non_blocking=True
         )
@@ -324,7 +311,10 @@ class GraphWorker(AggregationWorker):
         return args, kwargs
 
     def _record_embedding_size(
-        self, module, args, kwargs, module_index: int
+        self,
+        module,
+        args,
+        kwargs,
     ) -> tuple | None:
         if "model_bytes" not in self._recorded_model_size:
             parameter = self.trainer.model_util.get_parameter_list()
@@ -332,17 +322,17 @@ class GraphWorker(AggregationWorker):
                 parameter.element_size() * parameter.numel()
             )
         if "embedding_bytes" not in self._recorded_model_size:
-            self._recorded_model_size["embedding_bytes"] = {}
-        if module_index not in self._recorded_model_size["embedding_bytes"]:
+            self._recorded_model_size["embedding_bytes"] = []
+        if len(self._recorded_model_size["embedding_bytes"]) < len(
+            self._get_message_passing_modules()
+        ):
             x = args[0]
-            self._recorded_model_size["embedding_bytes"][module_index] = (
+            self._recorded_model_size["embedding_bytes"].append(
                 x[0].numel() * x[0].element_size()
             )
         return None
 
-    def _pass_node_feature(
-        self, module, args, kwargs, module_index: int
-    ) -> tuple | None:
+    def _pass_node_feature(self, module, args, kwargs) -> tuple | None:
         if not module.training:
             return None
 
