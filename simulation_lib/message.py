@@ -17,7 +17,7 @@ class Message:
 @dataclass(kw_only=True)
 class ParameterMessageBase(Message):
     is_initial: bool = False
-    dataset_size: int = 0
+    aggregation_weight: Any | None = None
 
 
 @dataclass(kw_only=True)
@@ -28,11 +28,6 @@ class ParameterMessage(ParameterMessageBase):
         for k, v in other_parameter.items():
             if k not in self.parameter:
                 self.parameter[k] = v
-
-
-@dataclass(kw_only=True)
-class ParameterFileMessage(ParameterMessageBase):
-    path: str
 
 
 @dataclass(kw_only=True)
@@ -48,6 +43,16 @@ class DeltaParameterMessage(ParameterMessageBase):
             setattr(msg, f.name, getattr(self, f.name))
         msg.parameter = new_parameter
         return msg
+
+
+@dataclass(kw_only=True)
+class FeatureMessage(Message):
+    feature: torch.Tensor | None
+
+
+@dataclass(kw_only=True)
+class MultipleWorkerMessage(Message):
+    worker_data: dict[int, Message]
 
 
 def get_message_size(msg: Message) -> int:

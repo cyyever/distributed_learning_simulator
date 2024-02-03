@@ -14,7 +14,7 @@ from cyy_torch_toolbox.ml_type import MachineLearningPhase
 from cyy_torch_toolbox.typing import TensorDict
 
 from ..executor import Executor
-from ..message import Message, ParameterMessage
+from ..message import Message, MultipleWorkerMessage, ParameterMessage
 
 
 class Server(Executor):
@@ -106,18 +106,17 @@ class Server(Executor):
 
     def _send_result(self, result: Message) -> None:
         self._before_send_result(result=result)
-        if "worker_result" in result.other_data:
-            for worker_id, data in result.other_data["worker_result"].items():
+        if isinstance(result, MultipleWorkerMessage):
+            for worker_id, data in result.worker_data.items():
                 self._endpoint.send(worker_id=worker_id, data=data)
-            return
-
-        selected_workers = self._select_workers()
-        get_logger().debug("choose workers %s", selected_workers)
-        if selected_workers:
-            self._endpoint.broadcast(data=result, worker_ids=selected_workers)
-        unselected_workers = set(range(self.worker_number)) - selected_workers
-        if unselected_workers:
-            self._endpoint.broadcast(data=None, worker_ids=unselected_workers)
+        else:
+            selected_workers = self._select_workers()
+            get_logger().debug("choose workers %s", selected_workers)
+            if selected_workers:
+                self._endpoint.broadcast(data=result, worker_ids=selected_workers)
+            unselected_workers = set(range(self.worker_number)) - selected_workers
+            if unselected_workers:
+                self._endpoint.broadcast(data=None, worker_ids=unselected_workers)
         self._after_send_result(result=result)
 
     def _select_workers(self) -> set:

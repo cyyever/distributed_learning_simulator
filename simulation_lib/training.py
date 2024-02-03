@@ -83,8 +83,11 @@ def train(
     config: DistributedTrainingConfig,
     practitioners: None | set = None,
 ) -> int | None:
-    # we need to deepcopy config for concurrent runs
+    # we need to deepcopy config for concurrent training
     config = copy.deepcopy(config)
+    practitioners = copy.deepcopy(practitioners)
+    config.reset_session()
+    config.apply_global_config()
     timer = TimeCounter()
     if hasattr(os, "sysconf"):
         name = "SC_OPEN_MAX"
@@ -97,7 +100,7 @@ def train(
     if practitioners is None:
         add_file_handler(config.log_file)
     else:
-        task_id = uuid.uuid4().int
+        task_id = uuid.uuid4().int + os.getpid()
     worker_config = get_worker_config(config, practitioners=practitioners)
     topology = worker_config.pop("topology")
     device_lock = multiprocessing.Manager().RLock()
@@ -158,12 +161,12 @@ def get_training_result(task_id: int, timeout: None | float = None) -> None | di
             stats[k] = v
             continue
         sv_dict: dict = {}
-        for round, tmp_sv_dict in v.items():
-            sv_dict[round] = {}
+        for round_number, tmp_sv_dict in v.items():
+            sv_dict[round_number] = {}
             for practitioner_id, worker_id in zip(
                 sorted(practitioner_ids), range(config.worker_number)
             ):
-                sv_dict[round][practitioner_id] = tmp_sv_dict[worker_id]
+                sv_dict[round_number][practitioner_id] = tmp_sv_dict[worker_id]
         stats[k] = sv_dict
     task_results.pop(task_id)
     return stats

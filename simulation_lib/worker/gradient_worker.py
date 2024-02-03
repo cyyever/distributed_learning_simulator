@@ -85,7 +85,7 @@ class GradientWorker(Client):
             ParameterMessage(
                 parameter=gradient_dict,
                 in_round=True,
-                dataset_size=self.trainer.dataset_size,
+                aggregation_weight=self.trainer.dataset_size,
             )
         )
         result = self._get_data_from_server()

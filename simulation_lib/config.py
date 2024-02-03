@@ -1,3 +1,4 @@
+import copy
 import datetime
 import os
 import uuid
@@ -10,28 +11,30 @@ from cyy_torch_toolbox.dataset import ClassificationDatasetCollection
 from cyy_torch_toolbox.device import get_devices
 
 from .practitioner import Practitioner
-from .sampler import get_dataset_collection_sampler
+from .sampler import get_dataset_collection_split
 
 
 class DistributedTrainingConfig(Config):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        self.exp_name: str = ""
         self.distributed_algorithm: str = ""
+        self.algorithm_kwargs: dict = {}
         self.worker_number: int = 0
-        self.parallel_number: int = len(get_devices())
         self.round: int = 0
         self.dataset_sampling: str = "iid"
         self.dataset_sampling_kwargs: dict[str, Any] = {}
-        self.distribute_init_parameters: bool = True
-        self.merge_validation_to_training_set = False
-        self.log_file: str = ""
-        self.limited_resource: bool = False
         self.endpoint_kwargs: dict = {}
-        self.algorithm_kwargs: dict = {}
+        self.exp_name: str = ""
+        self.merge_validation_to_training_set = False
+        self.parallel_number: int = len(get_devices())
+        self.log_file: str = ""
+        self.enable_training_log: bool = False
 
     def load_config_and_process(self, conf: Any) -> None:
         self.load_config(conf)
+        self.reset_session()
+
+    def reset_session(self) -> None:
         task_time = datetime.datetime.now()
         date_time = f"{task_time:%Y-%m-%d_%H_%M_%S}"
         dataset_name = self.dc_config.dataset_kwargs.get(
@@ -44,19 +47,18 @@ class DistributedTrainingConfig(Config):
             else f"{dataset_name}_{'_'.join(self.dataset_sampling)}",
             self.model_config.model_name,
             date_time,
-            str(uuid.uuid4()),
+            str(uuid.uuid4().int + os.getpid()),
         )
         if self.exp_name:
             dir_suffix = os.path.join(self.exp_name, dir_suffix)
         self.save_dir = os.path.join("session", dir_suffix)
         self.log_file = str(os.path.join("log", dir_suffix)) + ".log"
-        assert self.reproducible_env_config.make_reproducible_env
 
     def create_practitioners(self) -> set:
         practitioners = set()
         dataset_collection = self.create_dataset_collection()
         assert isinstance(dataset_collection, ClassificationDatasetCollection)
-        sampler = get_dataset_collection_sampler(
+        sampler = get_dataset_collection_split(
             name=self.dataset_sampling,
             dataset_collection=dataset_collection,
             part_number=self.worker_number,
@@ -66,7 +68,7 @@ class DistributedTrainingConfig(Config):
             practitioner = Practitioner(
                 practitioner_id=practitioner_id,
             )
-            practitioner.set_sampler(name=self.dc_config.dataset_name, sampler=sampler)
+            practitioner.set_sampler(sampler=sampler)
             practitioners.add(practitioner)
         assert practitioners
         return practitioners
@@ -101,4 +103,4 @@ def load_config_from_file(
     assert config_file is not None
     conf = omegaconf.OmegaConf.load(config_file)
     __load_config(conf)
-    return global_config
+    return copy.deepcopy(global_config)

@@ -1,12 +1,12 @@
 from cyy_torch_toolbox import Config, Trainer
-from cyy_torch_toolbox.dataset import DatasetCollectionSampler
+from cyy_torch_toolbox.dataset import SamplerBase, SplitBase
 
 
 class Practitioner:
     def __init__(self, practitioner_id: int) -> None:
         self.__id: int = practitioner_id
         self.__worker_id = practitioner_id
-        self._dataset_sampler: dict[str, DatasetCollectionSampler] = {}
+        self._dataset_sampler: dict[str, SamplerBase | SplitBase] = {}
 
     @property
     def id(self):
@@ -19,9 +19,10 @@ class Practitioner:
     def set_worker_id(self, worker_id: int) -> None:
         self.__worker_id = worker_id
 
-    def set_sampler(self, name: str, sampler: DatasetCollectionSampler) -> None:
-        assert name not in self._dataset_sampler
-        self._dataset_sampler[name] = sampler
+    def set_sampler(self, sampler: SamplerBase | SplitBase) -> None:
+        collection_name = sampler.dataset_collection.name
+        assert collection_name not in self._dataset_sampler
+        self._dataset_sampler[collection_name] = sampler
 
     def has_dataset(self, name: str) -> bool:
         return name in self._dataset_sampler
@@ -31,7 +32,11 @@ class Practitioner:
         trainer = config.create_trainer(dc=dc)
         sampler = self._dataset_sampler[trainer.dataset_collection.name]
         sampler.set_dataset_collection(trainer.dataset_collection)
-        sampler.sample(part_id=self.__worker_id)
+        if isinstance(sampler, SplitBase):
+            sampler.sample(part_id=self.__worker_id)
+        else:
+            sampler.sample()
+        assert id(sampler.dataset_collection) == id(trainer.dataset_collection)
         return trainer
 
 

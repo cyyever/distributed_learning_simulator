@@ -1,29 +1,29 @@
 from typing import Any
 
-from cyy_torch_toolbox.tensor import tensor_to
 from cyy_torch_toolbox.typing import TensorDict
 
-from ..message import DeltaParameterMessage, Message, ParameterMessage
+from ..config import DistributedTrainingConfig
+from ..message import Message, ParameterMessage
 
 
 class AggregationAlgorithm:
     def __init__(self) -> None:
         self._all_worker_data: dict[int, Message] = {}
         self.__skipped_workers: set[int] = set()
+        self._old_parameter: TensorDict | None = None
+        self._config: DistributedTrainingConfig | None = None
+
+    def set_old_parameter(self, old_parameter: TensorDict) -> None:
+        self._old_parameter = old_parameter
+
+    def set_config(self, config: DistributedTrainingConfig) -> None:
+        self._config = config
 
     @classmethod
-    def get_ratios(
-        cls, data_dict: dict[int, ParameterMessage], key_name: str | None = None
-    ) -> dict[int, float]:
-        if key_name is None:
-            total_scalar = sum(v.dataset_size for v in data_dict.values())
-            return {
-                k: float(v.dataset_size) / float(total_scalar)
-                for k, v in data_dict.items()
-            }
-        total_scalar = sum(v.other_data[key_name] for v in data_dict.values())
+    def get_ratios(cls, data_dict: dict[int, ParameterMessage]) -> dict[int, float]:
+        total_scalar = sum(v.aggregation_weight for v in data_dict.values())
         return {
-            k: float(v.other_data[key_name]) / float(total_scalar)
+            k: float(v.aggregation_weight) / float(total_scalar)
             for k, v in data_dict.items()
         }
 
@@ -31,15 +31,18 @@ class AggregationAlgorithm:
     def weighted_avg(
         cls,
         data_dict: dict[int, ParameterMessage],
-        weight_dict: dict[int, float],
+        weights: dict[int, float] | float,
     ) -> TensorDict:
         assert data_dict
         avg_data: TensorDict = {}
         for worker_id, v in data_dict.items():
-            ratio = weight_dict[worker_id]
-            assert 0 <= ratio <= 1
+            if isinstance(weights, dict):
+                weight = weights[worker_id]
+            else:
+                weight = weights
+            assert 0 <= weight <= 1
 
-            d = {k2: v2 * ratio for (k2, v2) in v.parameter.items()}
+            d = {k2: v2 * weight for (k2, v2) in v.parameter.items()}
             if not avg_data:
                 avg_data = d
             else:
@@ -49,41 +52,15 @@ class AggregationAlgorithm:
             assert not p.isnan().any().cpu()
         return avg_data
 
-    def __process_worker_data(
-        self,
-        worker_data: Message,
-        old_parameter_dict: TensorDict | None,
-    ) -> Message:
-        match worker_data:
-            case DeltaParameterMessage():
-                assert old_parameter_dict is not None
-                worker_data.delta_parameter = tensor_to(
-                    worker_data.delta_parameter, device="cpu"
-                )
-                return worker_data.restore(old_parameter_dict)
-            case ParameterMessage():
-                if old_parameter_dict is not None:
-                    worker_data.complete(old_parameter_dict)
-                worker_data.parameter = tensor_to(worker_data.parameter, device="cpu")
-                return worker_data
-            case Message():
-                return worker_data
-        raise NotImplementedError(worker_data)
-
     def process_worker_data(
         self,
         worker_id: int,
         worker_data: Message | None,
-        old_parameter_dict: TensorDict | None,
-        save_dir: str,
     ) -> None:
         if worker_data is None:
             self.__skipped_workers.add(worker_id)
             return
-        self._all_worker_data[worker_id] = self.__process_worker_data(
-            worker_data=worker_data,
-            old_parameter_dict=old_parameter_dict,
-        )
+        self._all_worker_data[worker_id] = worker_data
 
     def aggregate_worker_data(self) -> Any:
         raise NotImplementedError()

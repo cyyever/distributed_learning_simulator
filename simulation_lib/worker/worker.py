@@ -81,8 +81,13 @@ class Worker(Executor):
                     )
                 else:
                     self.trainer.hook_config.summarize_executor = False
+                self.trainer.hook_config.log_performance_metric = (
+                    self.config.enable_training_log
+                )
                 self.trainer.disable_hook("batch_loss_logger")
-                self.trainer.set_visualizer_prefix(prefix=f"round: {self._round_index},")
+                self.trainer.set_visualizer_prefix(
+                    prefix=f"round: {self._round_index},"
+                )
                 self.trainer.train(
                     **kwargs,
                 )

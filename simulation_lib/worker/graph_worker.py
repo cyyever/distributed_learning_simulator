@@ -10,7 +10,8 @@ from cyy_naive_lib.log import get_logger
 from cyy_torch_graph import GraphDatasetUtil
 from cyy_torch_toolbox.ml_type import MachineLearningPhase
 
-from ..message import Message, ParameterMessageBase, get_message_size
+from ..message import (FeatureMessage, Message, ParameterMessageBase,
+                       get_message_size)
 from .aggregation_worker import AggregationWorker
 
 
@@ -260,7 +261,7 @@ class GraphWorker(AggregationWorker):
 
         return tuple(args), kwargs
 
-    def training_boundary_feature(self, x) -> tuple | None:
+    def training_boundary_feature(self, x) -> tuple[torch.Tensor, list] | None:
         assert len(self.training_node_boundary) <= len(self.training_node_indices)
 
         assert x.shape[0] == self.n_id.shape[0]
@@ -341,26 +342,37 @@ class GraphWorker(AggregationWorker):
         x = args[0]
 
         n_id_set = set(self.n_id.tolist())
-        sent_data = Message(
-            other_data={
-                "node_embedding": self.training_boundary_feature(x),
-                "boundary": self._other_training_node_indices.intersection(n_id_set),
-            },
-            in_round=True,
-        )
-        cnt = len(n_id_set.intersection(self.training_node_boundary))
+        boundary = self._other_training_node_indices.intersection(n_id_set)
+        res = self.training_boundary_feature(x)
+        if res is not None:
+            feature = res[0]
+            sent_data = FeatureMessage(
+                feature=feature,
+                other_data={
+                    "boundary": boundary,
+                    "node_indices": res[1],
+                },
+                in_round=True,
+            )
+            self._communicated_embedding_bytes += (
+                feature.numel() * feature.element_size()
+            )
+        else:
+            assert not boundary
+            sent_data = FeatureMessage(
+                feature=None,
+                other_data={
+                    "boundary": boundary,
+                },
+                in_round=True,
+            )
         self._comunicated_batch_cnt += 1
-        self._communicated_embedding_bytes += cnt * x[0].shape[0] * x.element_size()
         self.send_data_to_server(sent_data)
-        # if self.config.limited_resource:
-        #     self._offload_from_device(in_round=True)
         res = self._get_data_from_server()
-        if self.config.limited_resource:
-            pass
-        assert res is not None
+        assert isinstance(res, FeatureMessage)
 
         new_x = self._get_cross_deivce_embedding(
-            res["node_indices"], res["node_embedding"], x
+            res.other_data["node_indices"], res.feature, x
         )
         self.__n_id = None
         return (new_x, self.__old_edge_index, *args[2:]), kwargs

@@ -4,34 +4,34 @@ import pickle
 from typing import Any
 
 from cyy_naive_lib.log import get_logger
+from cyy_torch_toolbox.tensor import tensor_to
 from cyy_torch_toolbox.typing import TensorDict
 
 from ..algorithm.aggregation_algorithm import AggregationAlgorithm
-from ..message import Message, ParameterMessage, ParameterMessageBase
+from ..message import (DeltaParameterMessage, Message, ParameterMessage,
+                       ParameterMessageBase)
 from ..util.model_cache import ModelCache
 from .server import Server
 
 
 class AggregationServer(Server):
     def __init__(self, algorithm: AggregationAlgorithm, **kwargs: Any) -> None:
-        Server.__init__(self, **kwargs)
-        self._model_cache: ModelCache = ModelCache()
+        super().__init__(**kwargs)
         self._round_index: int = 1
+        self._compute_stat: bool = True
+        self._stop = False
+        self.__model_cache: ModelCache = ModelCache()
         self.__worker_flag: set = set()
+        algorithm.set_config(self.config)
         self.__algorithm: AggregationAlgorithm = algorithm
         self.__stat: dict = {}
-        self._compute_stat: bool = True
         self.__plateau = 0
         self.__max_acc = 0
-        self.need_init_performance = False
-        self.__stop_by_worker = False
-        self.__early_stop = self.config.algorithm_kwargs.get("early_stop", False)
-        if self.__early_stop:
-            get_logger().warning("stop early")
+        self._need_init_performance = False
 
     @property
     def early_stop(self) -> bool:
-        return self.__early_stop
+        return self.config.algorithm_kwargs.get("early_stop", False)
 
     @property
     def algorithm(self):
@@ -55,8 +55,12 @@ class AggregationServer(Server):
             self.tester.offload_from_device()
         return parameter_dict
 
+    @property
+    def distribute_init_parameters(self) -> bool:
+        return self.config.algorithm_kwargs.get("distribute_init_parameters", True)
+
     def _before_start(self) -> None:
-        if self.config.distribute_init_parameters:
+        if self.distribute_init_parameters:
             self._send_result(
                 ParameterMessage(
                     in_round=True, parameter=self.__get_init_model(), is_initial=True
@@ -69,16 +73,22 @@ class AggregationServer(Server):
     def _process_worker_data(self, worker_id: int, data: Message) -> None:
         assert 0 <= worker_id < self.worker_number
         get_logger().debug("get data %s from worker %s", type(data), worker_id)
-        if data.end_training and not isinstance(data, ParameterMessageBase):
-            self.__stop_by_worker = True
-            if self.__stop_by_worker:
+        if data.end_training:
+            self._stop = True
+            if not isinstance(data, ParameterMessageBase):
                 return
-        self.__algorithm.process_worker_data(
-            worker_id=worker_id,
-            worker_data=data,
-            save_dir=self.config.get_save_dir(),
-            old_parameter_dict=self._model_cache.parameter_dict,
-        )
+
+        old_parameter_dict = self.__model_cache.parameter_dict
+        match data:
+            case DeltaParameterMessage():
+                assert old_parameter_dict is not None
+                data.delta_parameter = tensor_to(data.delta_parameter, device="cpu")
+                data = data.restore(old_parameter_dict)
+            case ParameterMessage():
+                if old_parameter_dict is not None:
+                    data.complete(old_parameter_dict)
+                data.parameter = tensor_to(data.parameter, device="cpu")
+        self.__algorithm.process_worker_data(worker_id=worker_id, worker_data=data)
         self.__worker_flag.add(worker_id)
         if len(self.__worker_flag) == self.worker_number:
             result = self._aggregate_worker_data()
@@ -92,20 +102,23 @@ class AggregationServer(Server):
             )
 
     def _aggregate_worker_data(self) -> Any:
+        self.__algorithm.set_old_parameter(self.__model_cache.parameter_dict)
         return self.__algorithm.aggregate_worker_data()
 
     def _before_send_result(self, result: Message) -> None:
         if not isinstance(result, ParameterMessageBase):
             return
         assert isinstance(result, ParameterMessage)
-        if self.need_init_performance:
-            assert self.config.distribute_init_parameters
-        if self.need_init_performance and result.is_initial:
+        if self._need_init_performance:
+            assert self.distribute_init_parameters
+        if self._need_init_performance and result.is_initial:
             self.__record_compute_stat(result.parameter, keep_performance_logger=False)
             self.__stat[0] = self.__stat.pop(1)
         elif self._compute_stat and not result.is_initial and not result.in_round:
             self.__record_compute_stat(result.parameter)
             if not result.end_training and self.early_stop and self._convergent():
+                get_logger().warning("stop early")
+                self._stop = True
                 result.end_training = True
         elif result.end_training:
             self.__record_compute_stat(result.parameter)
@@ -114,21 +127,15 @@ class AggregationServer(Server):
             "aggregated_model",
             f"round_{self.round_index}.pk",
         )
-        self._model_cache.cache_parameter_dict(result.parameter, model_path)
-        # if "partial_parameter" in result:
-        #     return
-        # if self.config.limited_resource:
-        #     result["parameter"] = ParameterFileMessage(
-        #         path=self._model_cache.get_parameter_path()
-        #     )
+        self.__model_cache.cache_parameter_dict(result.parameter, model_path)
 
     def _after_send_result(self, result: Any) -> None:
-        if isinstance(result, ParameterMessageBase) and not result.in_round:
+        if not result.in_round:
             self._round_index += 1
         self.__algorithm.clear_worker_data()
 
     def _stopped(self) -> bool:
-        return self._round_index > self.config.round or self.__stop_by_worker
+        return self._round_index > self.config.round or self._stop
 
     @property
     def performance_stat(self) -> dict:

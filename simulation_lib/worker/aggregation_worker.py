@@ -23,6 +23,10 @@ class AggregationWorker(Client):
         self._keep_model_cache: bool = False
         self._model_cache: ModelCache | None = ModelCache()
 
+    @property
+    def distribute_init_parameters(self) -> bool:
+        return self.config.algorithm_kwargs.get("distribute_init_parameters", True)
+
     def _before_training(self) -> None:
         super()._before_training()
         self.trainer.dataset_collection.remove_dataset(phase=MachineLearningPhase.Test)
@@ -37,7 +41,7 @@ class AggregationWorker(Client):
                 phase=MachineLearningPhase.Validation
             )
         # load initial parameters
-        if self.config.distribute_init_parameters:
+        if self.distribute_init_parameters:
             self.__get_result_from_server()
             if self._stopped():
                 return
@@ -93,7 +97,7 @@ class AggregationWorker(Client):
         if self._send_parameter_diff:
             assert self._model_cache is not None
             res = DeltaParameterMessage(
-                dataset_size=self.trainer.dataset_size,
+                aggregation_weight=self.trainer.dataset_size,
                 delta_parameter=self._model_cache.get_parameter_diff(parameter),
             )
             if not self._keep_model_cache:
@@ -101,7 +105,7 @@ class AggregationWorker(Client):
                 self._model_cache = ModelCache()
             return res
         return ParameterMessage(
-            dataset_size=self.trainer.dataset_size, parameter=parameter
+            aggregation_weight=self.trainer.dataset_size, parameter=parameter
         )
 
     def _load_result_from_server(self, result: Message) -> None:
