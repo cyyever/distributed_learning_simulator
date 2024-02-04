@@ -5,7 +5,8 @@ from typing import Any, Iterable, Type
 
 from cyy_naive_lib.log import get_logger
 
-from ..common_import import AggregationServer, FedAVGAlgorithm, Message
+from ..common_import import (AggregationServer, FedAVGAlgorithm,
+                             ParameterMessage)
 
 
 class ShapleyValueAlgorithm(FedAVGAlgorithm):
@@ -32,7 +33,7 @@ class ShapleyValueAlgorithm(FedAVGAlgorithm):
     def _get_players(self) -> Iterable:
         return sorted(self._all_worker_data.keys())
 
-    def aggregate_worker_data(self) -> Message:
+    def aggregate_worker_data(self) -> ParameterMessage:
         if self.sv_algorithm is None:
             assert self._server.round_index == 1
             self.sv_algorithm = self.sv_algorithm_cls(

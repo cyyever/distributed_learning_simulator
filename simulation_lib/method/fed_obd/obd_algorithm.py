@@ -139,7 +139,7 @@ class OpportunisticBlockDropoutAlgorithm:
 
         cur_block_parameter = cat_tensors_to_vector(cur_block_parameters)
         prev_block_parameter = cat_tensors_to_vector(prev_block_parameters)
-        delta = torch.norm(
+        delta = torch.linalg.vector_norm(
             cur_block_parameter.cpu() - prev_block_parameter.cpu()
         ).item()
         return (block_dict, delta, cur_block_parameter.nelement())

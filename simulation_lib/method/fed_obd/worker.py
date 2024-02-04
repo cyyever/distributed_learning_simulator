@@ -57,7 +57,6 @@ class FedOBDWorker(AggregationWorker, OpportunisticBlockDropoutAlgorithm):
 
     def _get_sent_data(self):
         assert self._model_cache is not None
-        assert self._keep_model_cache
         data = super()._get_sent_data()
         if self.__phase == Phase.STAGE_ONE:
             assert isinstance(data, ParameterMessage)
@@ -70,6 +69,5 @@ class FedOBDWorker(AggregationWorker, OpportunisticBlockDropoutAlgorithm):
             return data
 
         data.in_round = True
-        data.other_data["check_acc"] = True
         get_logger().warning("phase 2 keys %s", data.other_data.keys())
         return data

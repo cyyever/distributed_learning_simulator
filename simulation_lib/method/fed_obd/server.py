@@ -12,7 +12,8 @@ class FedOBDServer(AggregationServer):
         super().__init__(algorithm=FedAVGAlgorithm(), **kwargs)
         self.__phase: Phase = Phase.STAGE_ONE
         assert isinstance(self._endpoint, QuantServerEndpoint)
-        self._endpoint.quant_broadcast = True
+        self._endpoint.use_quant = True
+        self._compute_stat = True
 
     def _select_workers(self) -> set:
         if self.__phase != Phase.STAGE_ONE:
@@ -27,13 +28,6 @@ class FedOBDServer(AggregationServer):
     def _aggregate_worker_data(self) -> ParameterMessageBase:
         result: ParameterMessageBase = super()._aggregate_worker_data()
         assert result
-        self._compute_stat = False
-        if self.__phase == Phase.STAGE_ONE:
-            self._compute_stat = True
-        if "check_acc" in result.other_data:
-            self._compute_stat = True
-        if result.end_training:
-            self.__phase = Phase.END
         match self.__phase:
             case Phase.STAGE_ONE:
                 if self.round_index >= self.config.round or (
@@ -46,10 +40,10 @@ class FedOBDServer(AggregationServer):
                 if self.early_stop and not self.__has_improvement():
                     get_logger().warning("stop aggregation")
                     result.end_training = True
-            case Phase.END:
-                pass
             case _:
                 raise NotImplementedError(f"unknown phase {self.__phase}")
+        if result.end_training:
+            self.__phase = Phase.END
         return result
 
     def _stopped(self) -> bool:

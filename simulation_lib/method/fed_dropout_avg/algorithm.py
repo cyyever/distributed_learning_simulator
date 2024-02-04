@@ -6,8 +6,11 @@ from ..common_import import FedAVGAlgorithm
 
 
 class FedDropoutAvgAlgorithm(FedAVGAlgorithm):
-    def _get_weight(self, dataset_size: int, name: str, parameter: torch.Tensor) -> Any:
-        return (parameter != 0).float() * dataset_size
+    def _get_weight(self, worker_data, name: str, parameter: torch.Tensor) -> Any:
+        weight = super()._get_weight(
+            worker_data=worker_data, name=name, parameter=parameter
+        )
+        return (parameter != 0).float() * weight
 
     def _apply_total_weight(
         self, name: str, parameter: torch.Tensor, total_weight: Any
