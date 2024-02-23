@@ -40,6 +40,7 @@ class AggregationWorker(Client):
             self.trainer.dataset_collection.remove_dataset(
                 phase=MachineLearningPhase.Validation
             )
+        self.trainer.offload_from_device()
         # load initial parameters
         if self.distribute_init_parameters:
             self.__get_result_from_server()
@@ -109,9 +110,6 @@ class AggregationWorker(Client):
         )
 
     def _load_result_from_server(self, result: Message) -> None:
-        if result.end_training:
-            self._force_stop = True
-            raise StopExecutingException()
         model_path = os.path.join(
             self.save_dir, "aggregated_model", f"round_{self._round_index}.pk"
         )
@@ -136,6 +134,9 @@ class AggregationWorker(Client):
             parameter_dict=parameter_dict,
             reuse_learning_rate=self._reuse_learning_rate,
         )
+        if result.end_training:
+            self._force_stop = True
+            raise StopExecutingException()
 
     def _offload_from_device(self, in_round: bool = False) -> None:
         if self._model_cache is not None:

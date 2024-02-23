@@ -1,14 +1,23 @@
+import importlib
+import os
+
 from .common_import import *  # noqa: F401
 
-try:
-    from .fed_gcn import *  # noqa: F401
-    from .fed_gnn import *  # noqa: F401
-except BaseException:
-    pass
-from .fed_avg import *  # noqa: F401
-from .fed_dropout_avg import *  # noqa: F401
-from .fed_obd import *  # noqa: F401
-from .fed_paq import *  # noqa: F401
-from .qsgd import *  # noqa: F401
-from .shapley_value import *  # noqa: F401
-from .sign_sgd import *  # noqa: F401
+for entry in os.scandir(os.path.dirname(os.path.abspath(__file__))):
+    if not entry.is_dir():
+        continue
+    if entry.name == "__pycache__":
+        continue
+    if entry.name.startswith("."):
+        continue
+    try:
+        importlib.import_module(f".{entry.name}", "simulation_lib.method")
+        continue
+    except BaseException:
+        pass
+    try:
+        importlib.import_module(
+            f".{entry.name}", "distributed_learning_simulator.method"
+        )
+    except BaseException:
+        pass
