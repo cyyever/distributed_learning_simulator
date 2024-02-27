@@ -48,6 +48,17 @@ class Server(Executor):
         self.tester.model_util.disable_running_stats()
         self.tester.set_device(self._get_device())
         self.tester.hook_config.log_performance_metric = keep_performance_logger
+        if "batch_number" in self.tester.dataloader_kwargs:
+            batch_size = min(
+                int(
+                    self.tester.dataset_size
+                    / self.tester.dataloader_kwargs["batch_number"]
+                ),
+                100,
+            )
+            get_logger().debug("batch_size %s", batch_size)
+            self.tester.remove_dataloader_kwargs("batch_number")
+            self.tester.update_dataloader_kwargs(batch_size=batch_size)
         self.tester.inference()
         metric: dict = self.tester.performance_metric.get_epoch_metrics(1)
         self._release_device_lock()
