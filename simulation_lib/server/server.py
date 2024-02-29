@@ -1,5 +1,4 @@
 import copy
-import functools
 import os
 import pickle
 import random
@@ -7,6 +6,7 @@ from typing import Any
 
 import gevent
 import gevent.lock
+import torch
 from cyy_naive_lib.log import get_logger
 from cyy_naive_lib.topology.cs_endpoint import ServerEndpoint
 from cyy_torch_toolbox.inferencer import Inferencer
@@ -29,8 +29,7 @@ class Server(Executor):
     def worker_number(self) -> int:
         return self.config.worker_number
 
-    @functools.cached_property
-    def tester(self) -> Inferencer:
+    def get_tester(self) -> Inferencer:
         tester = self.config.create_inferencer(phase=MachineLearningPhase.Test)
         tester.dataset_collection.remove_dataset(phase=MachineLearningPhase.Training)
         tester.dataset_collection.remove_dataset(phase=MachineLearningPhase.Validation)
@@ -44,25 +43,27 @@ class Server(Executor):
     ) -> dict:
         if isinstance(parameter_dict, ParameterMessage):
             parameter_dict = parameter_dict.parameter
-        self.tester.model_util.load_parameter_dict(parameter_dict)
-        self.tester.model_util.disable_running_stats()
-        self.tester.set_device(self._get_device())
-        self.tester.hook_config.log_performance_metric = keep_performance_logger
-        if "batch_number" in self.tester.dataloader_kwargs:
+        tester = self.get_tester()
+        tester.set_visualizer_prefix(f"round: {self._round_index},")
+        tester.model_util.load_parameter_dict(parameter_dict)
+        tester.model_util.disable_running_stats()
+        tester.set_device_fun(self._get_device)
+        tester.hook_config.log_performance_metric = keep_performance_logger
+        if "batch_number" in tester.dataloader_kwargs:
             batch_size = min(
-                int(
-                    self.tester.dataset_size
-                    / self.tester.dataloader_kwargs["batch_number"]
-                ),
+                int(tester.dataset_size / tester.dataloader_kwargs["batch_number"]),
                 100,
             )
             get_logger().debug("batch_size %s", batch_size)
-            self.tester.remove_dataloader_kwargs("batch_number")
-            self.tester.update_dataloader_kwargs(batch_size=batch_size)
-        self.tester.inference()
-        metric: dict = self.tester.performance_metric.get_epoch_metrics(1)
+            tester.remove_dataloader_kwargs("batch_number")
+            tester.update_dataloader_kwargs(batch_size=batch_size)
+        if "num_neighbor" in tester.dataloader_kwargs:
+            tester.update_dataloader_kwargs(num_neighbor=10)
+        tester.inference()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        metric: dict = tester.performance_metric.get_epoch_metrics(1)
         self._release_device_lock()
-        self.tester.offload_from_device()
         return metric
 
     def start(self) -> None:

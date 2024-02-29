@@ -50,9 +50,7 @@ class AggregationServer(Server):
             with open(os.path.join(init_global_model_path), "rb") as f:
                 parameter_dict = pickle.load(f)
         else:
-            parameter_dict = self.tester.model_util.get_parameter_dict()
-            # save GPU memory
-            self.tester.offload_from_device()
+            parameter_dict = self.get_tester().model_util.get_parameter_dict()
         return parameter_dict
 
     @property
@@ -147,7 +145,6 @@ class AggregationServer(Server):
     def __record_compute_stat(
         self, parameter_dict: TensorDict, keep_performance_logger: bool = True
     ) -> None:
-        self.tester.set_visualizer_prefix(f"round: {self._round_index},")
         metric = self.get_metric(
             parameter_dict, keep_performance_logger=keep_performance_logger
         )
@@ -167,11 +164,11 @@ class AggregationServer(Server):
         max_acc = max(t["test_accuracy"] for t in self.__stat.values())
         if max_acc > self.__max_acc:
             self.__max_acc = max_acc
-            with open(os.path.join(self.save_dir, "best_global_model.pk"), "wb") as f:
-                pickle.dump(
-                    parameter_dict,
-                    f,
-                )
+            # with open(os.path.join(self.save_dir, "best_global_model.pk"), "wb") as f:
+            #     pickle.dump(
+            #         parameter_dict,
+            #         f,
+            #     )
 
     def _convergent(self) -> bool:
         max_acc = max(t["test_accuracy"] for t in self.performance_stat.values())

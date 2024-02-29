@@ -1,6 +1,7 @@
 from typing import Any
 
 import gevent
+import torch
 
 from ..executor import ExecutorContext
 from .worker import Worker
@@ -9,6 +10,8 @@ from .worker import Worker
 class Client(Worker):
     def send_data_to_server(self, data: Any) -> None:
         self._endpoint.send(data)
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     def _get_data_from_server(self) -> Any:
         ExecutorContext.local_data.ctx.release()

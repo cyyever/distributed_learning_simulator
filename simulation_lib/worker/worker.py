@@ -1,3 +1,4 @@
+import functools
 import os
 from functools import cached_property
 from typing import Any
@@ -70,13 +71,14 @@ class Worker(Executor):
                     # in case worker changes round number
                     if self._stopped():
                         break
-                    self.trainer.set_device(
-                        device=self._get_device(
+                    self.trainer.set_device_fun(
+                        functools.partial(
+                            self._get_device,
                             lock_callback=lambda: self.trainer.append_named_hook(
                                 ExecutorHookPoint.AFTER_BATCH,
                                 "release_device_lock",
                                 self._release_device_lock,
-                            )
+                            ),
                         )
                     )
                 else:
