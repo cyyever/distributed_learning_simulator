@@ -7,7 +7,8 @@ import dill
 
 
 class Session:
-    def __init__(self, session_dir: str):
+    def __init__(self, session_dir: str) -> None:
+        assert session_dir
         with open(
             os.path.join(session_dir, "round_record.json"), "rt", encoding="utf8"
         ) as f:
@@ -50,7 +51,7 @@ class Session:
 
 
 class GraphSession(Session):
-    def __init__(self, session_dir: str):
+    def __init__(self, session_dir: str) -> None:
         super().__init__(session_dir=session_dir)
         for root, dirs, __ in os.walk(os.path.join(session_dir, "..")):
             for name in dirs:
