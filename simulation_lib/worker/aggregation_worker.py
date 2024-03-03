@@ -155,11 +155,12 @@ class AggregationWorker(Client):
             result = super()._get_data_from_server()
             get_logger().debug("get result from server %s", type(result))
             if result is None:
-                get_logger().debug("skip round %s", self._round_index)
-                self._round_index += 1
+                get_logger().info("skip round %s", self._round_index)
                 self.send_data_to_server(None)
+                self._round_index += 1
                 if self._stopped():
                     return
+                continue
             self._load_result_from_server(result=result)
             break
         return

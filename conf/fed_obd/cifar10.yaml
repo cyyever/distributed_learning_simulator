@@ -3,7 +3,7 @@ dataset_name: CIFAR10
 model_name: densenet40
 distributed_algorithm: fed_obd
 optimizer_name: SGD
-worker_number: 10
+worker_number: 100
 round: 100
 learning_rate_scheduler_name: CosineAnnealingLR
 epoch: 5
@@ -11,11 +11,11 @@ learning_rate: 0.1
 batch_size: 64
 endpoint_kwargs:
   server:
-    weight: 0.01
+    weight: 0.001
   worker:
-    weight: 0.01
+    weight: 0.001
 algorithm_kwargs:
   second_phase_epoch: 10
-  dropout_rate: 0.9
-  random_client_number: 5
+  dropout_rate: 0.3
+  random_client_number: 50
 ...

@@ -20,13 +20,13 @@ class QuantClientEndpoint(ClientEndpoint):
 
     def get(self) -> Any:
         data = super().get()
-        if not self.dequant_server_data:
+        if not self.dequant_server_data or data is None:
             return data
         assert isinstance(data, ParameterMessage)
         data.parameter = self._dequant(data.parameter)
         return self._dequant(data)
 
-    def send(self, data):
+    def send(self, data) -> None:
         if isinstance(data, ParameterMessage):
             data.parameter = self._quant(data.parameter)
             self._after_quant(data=data)
@@ -85,7 +85,7 @@ class StochasticQuantServerEndpoint(QuantServerEndpoint):
 
 class NNADQClientEndpoint(QuantClientEndpoint):
     def __init__(self, weight, **kwargs) -> None:
-        get_logger().info("use weight %s", weight)
+        get_logger().debug("use weight %s", weight)
         quant, dequant = NNADQ(weight=weight)
         super().__init__(quant=quant, dequant=dequant, **kwargs)
 

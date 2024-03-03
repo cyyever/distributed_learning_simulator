@@ -68,24 +68,25 @@ class AggregationServer(Server):
     def _server_exit(self) -> None:
         self.__algorithm.exit()
 
-    def _process_worker_data(self, worker_id: int, data: Message) -> None:
+    def _process_worker_data(self, worker_id: int, data: Message | None) -> None:
         assert 0 <= worker_id < self.worker_number
         get_logger().debug("get data %s from worker %s", type(data), worker_id)
-        if data.end_training:
-            self._stop = True
-            if not isinstance(data, ParameterMessageBase):
-                return
+        if data is not None:
+            if data.end_training:
+                self._stop = True
+                if not isinstance(data, ParameterMessageBase):
+                    return
 
-        old_parameter_dict = self.__model_cache.parameter_dict
-        match data:
-            case DeltaParameterMessage():
-                assert old_parameter_dict is not None
-                data.delta_parameter = tensor_to(data.delta_parameter, device="cpu")
-                data = data.restore(old_parameter_dict)
-            case ParameterMessage():
-                if old_parameter_dict is not None:
-                    data.complete(old_parameter_dict)
-                data.parameter = tensor_to(data.parameter, device="cpu")
+            old_parameter_dict = self.__model_cache.parameter_dict
+            match data:
+                case DeltaParameterMessage():
+                    assert old_parameter_dict is not None
+                    data.delta_parameter = tensor_to(data.delta_parameter, device="cpu")
+                    data = data.restore(old_parameter_dict)
+                case ParameterMessage():
+                    if old_parameter_dict is not None:
+                        data.complete(old_parameter_dict)
+                    data.parameter = tensor_to(data.parameter, device="cpu")
         self.__algorithm.process_worker_data(worker_id=worker_id, worker_data=data)
         self.__worker_flag.add(worker_id)
         if len(self.__worker_flag) == self.worker_number:

@@ -15,10 +15,11 @@ class FedOBDWorker(AggregationWorker, OpportunisticBlockDropoutAlgorithm):
 
     def __init__(self, *args, **kwargs):
         AggregationWorker.__init__(self, *args, **kwargs)
+        log_partition = self.log_lock.acquire(blocking=False)
         OpportunisticBlockDropoutAlgorithm.__init__(
             self,
             dropout_rate=self.config.algorithm_kwargs["dropout_rate"],
-            worker_id=self.worker_id,
+            log_partition=log_partition,
         )
         assert isinstance(self._endpoint, QuantClientEndpoint)
         self._endpoint.dequant_server_data = True
