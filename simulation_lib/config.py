@@ -8,7 +8,7 @@ import hydra
 import omegaconf
 from cyy_torch_toolbox import Config
 from cyy_torch_toolbox.dataset import ClassificationDatasetCollection
-from cyy_torch_toolbox.device import get_devices
+from cyy_torch_toolbox.device import get_device_memory_info
 
 from .practitioner import Practitioner
 from .sampler import get_dataset_collection_split
@@ -26,13 +26,37 @@ class DistributedTrainingConfig(Config):
         self.endpoint_kwargs: dict = {}
         self.exp_name: str = ""
         self.merge_validation_to_training_set = False
-        self.parallel_number: int = len(get_devices())
         self.log_file: str = ""
         self.enable_training_log: bool = False
+        self.worker_number_per_process: int = 0
 
     def load_config_and_process(self, conf: Any) -> None:
         self.load_config(conf)
         self.reset_session()
+
+    def get_worker_number_per_process(self) -> int:
+        if self.worker_number_per_process != 0:
+            return self.worker_number_per_process
+
+        memory_info = get_device_memory_info()
+        refined_memory_info: dict = {}
+        MB = 1024 * 1024
+        GB = MB * 1024
+        for device, info in memory_info.items():
+            if info.used / info.total > 0.95:
+                continue
+            free_GB = int(info.free / GB)
+            if free_GB == 0:
+                continue
+            refined_memory_info[device] = info.free
+        assert refined_memory_info
+        total_bytes = sum(refined_memory_info.values())
+        MB_per_worker = min(total_bytes / MB / self.worker_number, 10 * GB)
+        worker_number_per_process = int(
+            min(refined_memory_info.values()) / MB / MB_per_worker
+        )
+        assert worker_number_per_process > 0
+        return worker_number_per_process
 
     def reset_session(self) -> None:
         task_time = datetime.datetime.now()

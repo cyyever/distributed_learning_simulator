@@ -49,6 +49,7 @@ def start_workers(
     worker_configs: list[dict],
 ) -> None:
     device_lock = get_process_data()["device_lock"]
+    log_lock = get_process_data()["log_lock"]
     topology = get_process_data()["topology"]
     workers: list = []
     assert worker_configs
@@ -59,6 +60,7 @@ def start_workers(
                 extra_kwargs={
                     "task_id": task_id,
                     "device_lock": device_lock,
+                    "log_lock": log_lock,
                 },
                 extra_endpoint_kwargs={
                     "topology": topology,
@@ -104,18 +106,20 @@ def train(
     worker_config = get_worker_config(config, practitioners=practitioners)
     topology = worker_config.pop("topology")
     device_lock = multiprocessing.Manager().RLock()
+    log_lock = multiprocessing.Manager().Semaphore()
     assert topology.worker_num == config.worker_number
     process_pool: TorchProcessPool = TorchProcessPool(
         initargs=[
             {
                 "fun_kwargs": {
                     "device_lock": device_lock,
+                    "log_lock": log_lock,
                     "topology": topology,
                 }
             }
         ],
     )
-    for worker_configs in worker_config["worker"].values():
+    for worker_configs in worker_config["worker"]:
         process_pool.submit(
             start_workers, task_id=task_id, worker_configs=worker_configs
         )

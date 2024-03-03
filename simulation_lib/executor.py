@@ -46,12 +46,19 @@ class Executor:
         config: DistributedTrainingConfig,
         name: str,
         device_lock: threading.RLock,
+        log_lock: threading.Semaphore | None = None,
     ) -> None:
         self.__config: DistributedTrainingConfig = copy.deepcopy(config)
         self.__used_device_memory = None
         self.__name = name
         self.__device_lock: threading.RLock = device_lock
+        self.__log_lock: threading.Semaphore | None = log_lock
         self.__hold_device_lock: bool = False
+
+    @property
+    def log_lock(self) -> threading.Semaphore:
+        assert self.__log_lock is not None
+        return self.__log_lock
 
     @property
     def config(self) -> DistributedTrainingConfig:

@@ -1,6 +1,6 @@
 import functools
-import itertools
 
+from cyy_naive_lib.log import get_logger
 from cyy_naive_lib.topology.central_topology import ProcessPipeCentralTopology
 from cyy_torch_toolbox.data_structure.torch_process_context import \
     TorchProcessContext
@@ -34,27 +34,35 @@ def get_worker_config(
         endpoint_kwargs=config.endpoint_kwargs.get("server", {}),
         kwargs={"config": config},
     )
-    client_config: dict = {}
-    for practitioner, next_process_idx in zip(
-        practitioners, itertools.cycle(list(range(config.parallel_number)))
-    ):
-        if next_process_idx not in client_config:
-            client_config[next_process_idx] = []
-        client_config[next_process_idx].append(
-            {
-                "constructor": functools.partial(
-                    CentralizedAlgorithmFactory.create_client,
-                    algorithm_name=config.distributed_algorithm,
-                    endpoint_kwargs=config.endpoint_kwargs.get("worker", {})
-                    | {
-                        "worker_id": practitioner.worker_id,
-                    },
-                    kwargs={
-                        "config": config,
-                        "practitioner": practitioner,
-                    },
-                ),
-            }
+    worker_number_per_process = config.get_worker_number_per_process()
+    get_logger().warning(
+        "There are %s workers in total, and %s workers form a group",
+        len(practitioners),
+        worker_number_per_process,
+    )
+    client_config: list[list[dict]] = []
+    tmp = list(practitioners)
+    while tmp:
+        batch = tmp[:worker_number_per_process]
+        tmp = tmp[worker_number_per_process:]
+        client_config.append(
+            [
+                {
+                    "constructor": functools.partial(
+                        CentralizedAlgorithmFactory.create_client,
+                        algorithm_name=config.distributed_algorithm,
+                        endpoint_kwargs=config.endpoint_kwargs.get("worker", {})
+                        | {
+                            "worker_id": practitioner.worker_id,
+                        },
+                        kwargs={
+                            "config": config,
+                            "practitioner": practitioner,
+                        },
+                    ),
+                }
+                for practitioner in batch
+            ]
         )
     assert client_config
     result["worker"] = client_config
