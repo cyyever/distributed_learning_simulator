@@ -6,6 +6,7 @@ from typing import Any
 
 import hydra
 import omegaconf
+from cyy_naive_lib.log import get_logger
 from cyy_torch_toolbox import Config
 from cyy_torch_toolbox.dataset import ClassificationDatasetCollection
 from cyy_torch_toolbox.device import get_device_memory_info
@@ -50,8 +51,18 @@ class DistributedTrainingConfig(Config):
                 continue
             refined_memory_info[device] = info.free
         assert refined_memory_info
+        if self.worker_number <= len(refined_memory_info):
+            return 1
+        # small scale training
+        if self.worker_number <= 50:
+            return int(self.worker_number / len(refined_memory_info))
         total_bytes = sum(refined_memory_info.values())
         MB_per_worker = min(total_bytes / MB / self.worker_number, 10 * GB)
+        get_logger().debug(
+            "MB_per_worker %s other %s",
+            MB_per_worker,
+            min(refined_memory_info.values()) / MB,
+        )
         worker_number_per_process = int(
             min(refined_memory_info.values()) / MB / MB_per_worker
         )
@@ -66,9 +77,11 @@ class DistributedTrainingConfig(Config):
         )
         dir_suffix = os.path.join(
             self.distributed_algorithm,
-            f"{dataset_name}_{self.dataset_sampling}"
-            if isinstance(self.dataset_sampling, str)
-            else f"{dataset_name}_{'_'.join(self.dataset_sampling)}",
+            (
+                f"{dataset_name}_{self.dataset_sampling}"
+                if isinstance(self.dataset_sampling, str)
+                else f"{dataset_name}_{'_'.join(self.dataset_sampling)}"
+            ),
             self.model_config.model_name,
             date_time,
             str(uuid.uuid4().int + os.getpid()),

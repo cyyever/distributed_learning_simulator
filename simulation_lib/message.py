@@ -1,6 +1,6 @@
 import copy
 from dataclasses import dataclass, field, fields
-from typing import Any
+from typing import Any, Mapping
 
 import torch
 from cyy_torch_toolbox.tensor import recursive_tensor_op
@@ -52,7 +52,7 @@ class FeatureMessage(Message):
 
 @dataclass(kw_only=True)
 class MultipleWorkerMessage(Message):
-    worker_data: dict[int, Message]
+    worker_data: Mapping[int, Message]
 
 
 def get_message_size(msg: Message) -> int:

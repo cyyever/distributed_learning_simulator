@@ -44,7 +44,8 @@ class Server(Executor):
         if isinstance(parameter_dict, ParameterMessage):
             parameter_dict = parameter_dict.parameter
         tester = self.get_tester()
-        tester.set_visualizer_prefix(f"round: {self._round_index},")
+        if hasattr(self, "_round_index"):
+            tester.set_visualizer_prefix(f"round: {self._round_index},")
         tester.model_util.load_parameter_dict(parameter_dict)
         tester.model_util.disable_running_stats()
         tester.set_device_fun(self._get_device)
