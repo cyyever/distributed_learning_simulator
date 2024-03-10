@@ -1,13 +1,14 @@
 ---
-dataset_name: Yelp
-model_name: TwoGCN
+dataset_name: Cora
+model_name: SimpleGCN
 distributed_algorithm: fed_gnn
-epoch: 1
-learning_rate: 0.001
-fake_weight_decay: 0
-round: 50
-worker_number: 50
-use_amp: false
+epoch: 10
+use_amp: true
+learning_rate: 0.01
+fake_weight_decay: 0.01
+round: 10
+worker_number: 10
+parallel_number: 2
 algorithm_kwargs:
   share_feature: false
   edge_drop_rate: 0.99

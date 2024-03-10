@@ -1,7 +1,7 @@
 ---
-dataset_name: Yelp
+dataset_name: ogbn-products
 model_name: TwoGCN
-distributed_algorithm: fed_gnn
+distributed_algorithm: graphfed
 epoch: 1
 learning_rate: 0.001
 fake_weight_decay: 0
@@ -9,8 +9,8 @@ round: 50
 worker_number: 50
 use_amp: false
 algorithm_kwargs:
-  share_feature: false
-  edge_drop_rate: 0.99
+  share_feature: true
+  edge_drop_rate: 0.5
 dataloader_kwargs:
   batch_number: 10
   num_neighbor: 10

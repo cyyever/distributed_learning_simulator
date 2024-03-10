@@ -2,7 +2,6 @@
 dataset_name: imdb
 model_name: TransformerClassificationModel
 distributed_algorithm: sign_SGD
-distribute_init_parameters: false
 optimizer_name: SGD
 worker_number: 10
 round: 1
@@ -11,10 +10,14 @@ epoch: 100
 batch_size: 64
 learning_rate: 0.01
 dataset_kwargs:
-  max_len: 300
+  input_max_len: 300
+  dataset_type: text
+  tokenizer:
+    type: spacy
 model_kwargs:
-  max_len: 300
   word_vector_name: glove.6B.100d
   num_encoder_layer: 2
   d_model: 100
   nhead: 5
+algorithm_kwargs:
+  distribute_init_parameters: false

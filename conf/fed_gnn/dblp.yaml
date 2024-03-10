@@ -1,6 +1,8 @@
 ---
-dataset_name: Yelp
-model_name: TwoGCN
+dataset_name: CitationFull
+model_name: OneGCN
+dataset_kwargs:
+  name: DBLP
 distributed_algorithm: fed_gnn
 epoch: 1
 learning_rate: 0.001
