@@ -7,8 +7,9 @@ colorlog
 psutil
 FileLock-git
 requests
+ogb
 tqdm
-torch>=2.1
+torch>=2.2
 nvidia-ml-py
 torchvision
 torchmetrics

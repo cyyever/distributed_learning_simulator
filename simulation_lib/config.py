@@ -11,6 +11,7 @@ from cyy_torch_toolbox import Config
 from cyy_torch_toolbox.dataset import ClassificationDatasetCollection
 from cyy_torch_toolbox.device import get_device_memory_info
 
+from .dependency import import_results  # noqa: F401
 from .practitioner import Practitioner
 from .sampler import get_dataset_collection_split
 
