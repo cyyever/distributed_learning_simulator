@@ -26,7 +26,7 @@ class QuantClientEndpoint(ClientEndpoint):
         data.parameter = self._dequant(data.parameter)
         return self._dequant(data)
 
-    def send(self, data) -> None:
+    def send(self, data: Any) -> None:
         if isinstance(data, ParameterMessage):
             data.parameter = self._quant(data.parameter)
             self._after_quant(data=data)
@@ -38,13 +38,15 @@ class QuantClientEndpoint(ClientEndpoint):
 
 
 class QuantServerEndpoint(ServerEndpoint):
-    def __init__(self, quant: Callable, dequant: Callable, **kwargs: Any) -> None:
+    def __init__(
+        self, quant: Callable | None, dequant: Callable, **kwargs: Any
+    ) -> None:
         super().__init__(**kwargs)
-        self._quant: Callable = quant
+        self._quant: Callable | None = quant
         self._dequant: Callable = dequant
         self.use_quant: bool = False
 
-    def get(self, worker_id):
+    def get(self, worker_id) -> Any:
         data = super().get(worker_id=worker_id)
         match data:
             case ParameterMessage():
@@ -59,6 +61,7 @@ class QuantServerEndpoint(ServerEndpoint):
             if not quantized:
                 if self.use_quant:
                     assert isinstance(data, ParameterMessage)
+                    assert self._quant is not None
                     data.parameter = self._quant(data.parameter)
                     data.other_data["quantized"] = True
                     get_logger().debug("broadcast quantization")
@@ -67,36 +70,36 @@ class QuantServerEndpoint(ServerEndpoint):
                     get_logger().debug("server not use quantization")
         super().send(worker_id=worker_id, data=data)
 
-    def _after_quant(self, data) -> None:
+    def _after_quant(self, data: Any) -> None:
         pass
 
 
 class StochasticQuantClientEndpoint(QuantClientEndpoint):
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         quant, dequant = stochastic_quantization(quantization_level=255)
         super().__init__(quant=quant, dequant=dequant, **kwargs)
 
 
 class StochasticQuantServerEndpoint(QuantServerEndpoint):
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         quant, dequant = stochastic_quantization(quantization_level=255)
         super().__init__(quant=quant, dequant=dequant, **kwargs)
 
 
 class NNADQClientEndpoint(QuantClientEndpoint):
-    def __init__(self, weight, **kwargs) -> None:
+    def __init__(self, weight: float, **kwargs: Any) -> None:
         get_logger().debug("use weight %s", weight)
         quant, dequant = NNADQ(weight=weight)
         super().__init__(quant=quant, dequant=dequant, **kwargs)
 
-    def _after_quant(self, data) -> None:
+    def _after_quant(self, data: Any) -> None:
         NeuralNetworkAdaptiveDeterministicQuant.check_compression_ratio(
             quantized_data=data, prefix="worker"
         )
 
 
 class NNADQServerEndpoint(QuantServerEndpoint):
-    def __init__(self, weight=None, **kwargs):
+    def __init__(self, weight: float | None = None, **kwargs: Any) -> None:
         if weight is None:
             quant = None
             dequant = NeuralNetworkAdaptiveDeterministicDequant()

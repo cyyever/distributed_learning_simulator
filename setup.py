@@ -17,11 +17,11 @@ for dirname in os.listdir("./simulation_lib"):
             f"distributed_learning_simulator.{dirname}"
         ] = f"./simulation_lib/{dirname}"
 
-for dirname in os.listdir("./simulation_lib/method"):
-    if os.path.isdir(os.path.join("./simulation_lib/method", dirname)):
+for dirname in os.listdir("./method"):
+    if os.path.isdir(os.path.join("./method", dirname)):
         package_dir[
             f"distributed_learning_simulator.method.{dirname}"
-        ] = f"./simulation_lib/method/{dirname}"
+        ] = f"./method/{dirname}"
 
 
 setuptools.setup(
@@ -33,9 +33,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/cyyever/distributed_learning_simulator",
     package_dir=package_dir,
-    package_data={
-        "distributed_learning_simulator.conf": ["*/*.yaml", "*.yaml"]
-    },
+    package_data={"distributed_learning_simulator.conf": ["*/*.yaml", "*.yaml"]},
     include_package_data=True,
     classifiers=[
         "Programming Language :: Python :: 3",

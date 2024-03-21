@@ -1,10 +1,7 @@
 import copy
 import multiprocessing
 import os
-
 # we use these env variables to save memory in large-scale training
-os.environ["CUDA_MODULE_LOADING"] = "LAZY"
-os.environ["USE_THREAD_DATALOADER"] = "1"
 import uuid
 
 import gevent
@@ -17,6 +14,9 @@ from cyy_torch_toolbox.data_structure.torch_process_pool import \
 
 from .algorithm_factory import get_worker_config
 from .config import DistributedTrainingConfig
+
+os.environ["CUDA_MODULE_LOADING"] = "LAZY"
+os.environ["USE_THREAD_DATALOADER"] = "1"
 
 
 def start_server(task_id: int | None, server_config: dict) -> dict:

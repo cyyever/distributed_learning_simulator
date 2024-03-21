@@ -91,7 +91,7 @@ class GraphWorker(AggregationWorker):
 
     def _before_training(self) -> None:
         super()._before_training()
-        if self.worker_id == 0:
+        if self.hold_log_lock:
             if self._share_feature:
                 get_logger().info("share feature")
             else:
@@ -202,7 +202,7 @@ class GraphWorker(AggregationWorker):
             "edge_drop_rate", None
         )
         if edge_drop_rate is not None and edge_drop_rate != 0:
-            if self.worker_id == 0:
+            if self.hold_log_lock:
                 get_logger().info("drop in client edge with rate: %s", edge_drop_rate)
             dropout_mask = torch.bernoulli(
                 torch.full(training_edge_mask.size(), 1 - edge_drop_rate)

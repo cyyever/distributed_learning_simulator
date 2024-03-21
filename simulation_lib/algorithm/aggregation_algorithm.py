@@ -20,17 +20,26 @@ class AggregationAlgorithm:
         self._config = config
 
     @classmethod
-    def get_ratios(cls, data_dict: dict[int, ParameterMessage]) -> dict[int, float]:
-        total_scalar = sum(v.aggregation_weight for v in data_dict.values())
-        return {
-            k: float(v.aggregation_weight) / float(total_scalar)
-            for k, v in data_dict.items()
-        }
+    def get_total_weight(cls, data_dict: dict[int, Message]) -> float:
+        total_weight: float = 0
+        for v in data_dict.values():
+            assert v.aggregation_weight is not None
+            total_weight += v.aggregation_weight
+        return total_weight
+
+    @classmethod
+    def get_ratios(cls, data_dict: dict[int, Message]) -> dict[int, float]:
+        total_weight: float = float(cls.get_total_weight(data_dict=data_dict))
+        ratios = {}
+        for k, v in data_dict.items():
+            assert v.aggregation_weight is not None
+            ratios[k] = float(v.aggregation_weight) / total_weight
+        return ratios
 
     @classmethod
     def weighted_avg(
         cls,
-        data_dict: dict[int, ParameterMessage],
+        data_dict: dict[int, Message],
         weights: dict[int, float] | float,
     ) -> TensorDict:
         assert data_dict
@@ -41,7 +50,7 @@ class AggregationAlgorithm:
             else:
                 weight = weights
             assert 0 <= weight <= 1
-
+            assert isinstance(v, ParameterMessage)
             d = {k2: v2 * weight for (k2, v2) in v.parameter.items()}
             if not avg_data:
                 avg_data = d
@@ -52,15 +61,34 @@ class AggregationAlgorithm:
             assert not p.isnan().any().cpu()
         return avg_data
 
+    @classmethod
+    def weighted_avg_for_scalar(
+        cls,
+        data_dict: dict[int, Message],
+        weights: dict[int, float] | float,
+        scalar_key: str,
+    ) -> float:
+        assert data_dict
+        result: float = 0
+        for worker_id, v in data_dict.items():
+            if isinstance(weights, dict):
+                weight = weights[worker_id]
+            else:
+                weight = weights
+            assert 0 <= weight <= 1
+            result += v.other_data[scalar_key] * weight
+        return result
+
     def process_worker_data(
         self,
         worker_id: int,
         worker_data: Message | None,
-    ) -> None:
+    ) -> bool:
         if worker_data is None:
             self.__skipped_workers.add(worker_id)
-            return
+            return True
         self._all_worker_data[worker_id] = worker_data
+        return True
 
     def aggregate_worker_data(self) -> Any:
         raise NotImplementedError()

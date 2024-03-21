@@ -1,4 +1,3 @@
-
 from cyy_naive_lib.storage import DataStorage
 from cyy_torch_toolbox.tensor import tensor_to
 from cyy_torch_toolbox.typing import TensorDict
@@ -7,6 +6,10 @@ from cyy_torch_toolbox.typing import TensorDict
 class ModelCache:
     def __init__(self) -> None:
         self.__parameter_dict: DataStorage = DataStorage()
+
+    @property
+    def has_data(self) -> bool:
+        return self.__parameter_dict.has_data()
 
     @property
     def parameter_dict(self) -> TensorDict:

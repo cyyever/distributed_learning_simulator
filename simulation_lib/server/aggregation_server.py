@@ -132,6 +132,9 @@ class AggregationServer(Server):
         if not result.in_round:
             self._round_index += 1
         self.__algorithm.clear_worker_data()
+        if result.end_training or self._stopped():
+            assert self.__model_cache.has_data
+            self.__model_cache.save()
 
     def _stopped(self) -> bool:
         return self._round_index > self.config.round or self._stop

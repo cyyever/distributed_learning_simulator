@@ -1,84 +1,12 @@
-import torch
-
-from ..message import (FeatureMessage, Message, MultipleWorkerMessage,
-                       ParameterMessageBase)
-from .aggregation_algorithm import AggregationAlgorithm
+from .composite_aggregation_algorithm import CompositeAggregationAlgorithm
 from .fed_avg_algorithm import FedAVGAlgorithm
+from .graph_embedding_algorithm import GraphNodeEmbeddingPassingAlgorithm
+from .graph_topology_algorithm import GraphTopologyAlgorithm
 
 
-class GraphNodeEmbeddingPassingAlgorithm(AggregationAlgorithm):
-    def __init__(self, **kwargs) -> None:
+class GraphAlgorithm(CompositeAggregationAlgorithm):
+    def __init__(self) -> None:
         super().__init__()
-        self._aggregation_algorithm: AggregationAlgorithm = kwargs.pop(
-            "aggregation_algorithm", FedAVGAlgorithm()
-        )
-        self.__node_embeddings: list[torch.Tensor] = []
-        self.__node_embedding_indices: dict = {}
-        self.__boundaris: dict = {}
-        self._training_node_indices: dict = {}
-        self.__training_node_index_aggregation: bool = False
-
-    def process_worker_data(self, worker_id: int, worker_data: Message | None) -> None:
-        if isinstance(worker_data, ParameterMessageBase) or worker_data is None:
-            self._aggregation_algorithm.process_worker_data(
-                worker_id=worker_id, worker_data=worker_data
-            )
-            return
-        if "training_node_indices" in worker_data.other_data:
-            self.__training_node_index_aggregation = True
-            self._training_node_indices[worker_id] = worker_data.other_data.pop(
-                "training_node_indices"
-            )
-            assert not worker_data.other_data
-            return
-        assert isinstance(worker_data, FeatureMessage)
-        node_embedding = worker_data.feature
-        if node_embedding is not None:
-            node_indices = worker_data.other_data.pop("node_indices")
-            for tensor_idx, node_idx in enumerate(node_indices):
-                assert node_idx not in self.__node_embedding_indices
-                self.__node_embedding_indices[node_idx] = (
-                    len(self.__node_embeddings),
-                    tensor_idx,
-                )
-            self.__node_embeddings.append(node_embedding)
-        self.__boundaris[worker_id] = worker_data.other_data.pop("boundary")
-        assert not worker_data.other_data
-
-    def __get_node_embedding(self, node_idx) -> torch.Tensor:
-        list_idx, tensor_idx = self.__node_embedding_indices[node_idx]
-        return self.__node_embeddings[list_idx][tensor_idx]
-
-    def aggregate_worker_data(self) -> Message:
-        if self.__training_node_index_aggregation:
-            msg = Message(
-                in_round=True,
-                other_data={"training_node_indices": self._training_node_indices},
-            )
-            self.__training_node_index_aggregation = False
-            return msg
-
-        if self.__node_embeddings:
-            worker_data: dict[int, FeatureMessage] = {}
-            node_embedding_index_set = set(self.__node_embedding_indices.keys())
-            for worker_id, boundary in self.__boundaris.items():
-                node_indices = boundary.intersection(node_embedding_index_set)
-                node_indices = tuple(sorted(node_indices))
-                node_embedding = None
-                if node_indices:
-                    node_embedding = torch.stack(
-                        [
-                            self.__get_node_embedding(node_idx).cpu()
-                            for node_idx in node_indices
-                        ]
-                    )
-                worker_data[worker_id] = FeatureMessage(
-                    feature=node_embedding,
-                    other_data={"node_indices": node_indices},
-                    in_round=True,
-                )
-            self.__node_embeddings = []
-            self.__node_embedding_indices = {}
-            self.__boundaris = {}
-            return MultipleWorkerMessage(in_round=True, worker_data=worker_data)
-        return self._aggregation_algorithm.aggregate_worker_data()
+        self.append_algorithm(GraphTopologyAlgorithm())
+        self.append_algorithm(GraphNodeEmbeddingPassingAlgorithm())
+        self.append_algorithm(FedAVGAlgorithm())

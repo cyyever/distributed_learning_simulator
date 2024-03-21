@@ -18,10 +18,11 @@ class AggregationWorker(Client):
         super().__init__(**kwargs)
         self._aggregation_time: ExecutorHookPoint = ExecutorHookPoint.AFTER_EXECUTE
         self._reuse_learning_rate: bool = False
-        self.__choose_model_by_validation: bool = False
+        self.__choose_model_by_validation: bool | None = None
         self._send_parameter_diff: bool = True
         self._keep_model_cache: bool = False
-        self._model_cache: ModelCache | None = ModelCache()
+        self._send_loss: bool = False
+        self._model_cache: ModelCache = ModelCache()
 
     @property
     def distribute_init_parameters(self) -> bool:
@@ -30,11 +31,14 @@ class AggregationWorker(Client):
     def _before_training(self) -> None:
         super()._before_training()
         self.trainer.dataset_collection.remove_dataset(phase=MachineLearningPhase.Test)
-        if (
-            self.config.hyper_parameter_config.epoch > 1
-            and self.config.dataset_sampling == "iid"
-        ):
-            self.enable_choose_model_by_validation()
+        if self.__choose_model_by_validation is None:
+            if (
+                self.config.hyper_parameter_config.epoch > 1
+                and self.config.dataset_sampling == "iid"
+            ):
+                self.enable_choose_model_by_validation()
+            else:
+                self.disable_choose_model_by_validation()
         if not self.__choose_model_by_validation:
             # Skip Validation to speed up training
             self.trainer.dataset_collection.remove_dataset(
@@ -53,7 +57,8 @@ class AggregationWorker(Client):
         self.trainer.remove_named_hook(name="aggregation")
 
         def __aggregation_impl(**kwargs) -> None:
-            self._aggregation(sent_data=self._get_sent_data(), **kwargs)
+            if not self._stopped():
+                self._aggregation(sent_data=self._get_sent_data(), **kwargs)
 
         self.trainer.append_named_hook(
             self._aggregation_time,
@@ -93,21 +98,32 @@ class AggregationWorker(Client):
             get_logger().debug("use best model")
             assert self.best_model_hook is not None
             parameter = self.best_model_hook.best_model["parameter"]
+            best_epoch = self.best_model_hook.best_model["epoch"]
         else:
             parameter = self.trainer.model_util.get_parameter_dict()
+            best_epoch = self.trainer.hyper_parameter.epoch
+        other_data = {}
+        if self._send_loss:
+            other_data[
+                "training_loss"
+            ] = self.trainer.performance_metric.get_epoch_metric(best_epoch, "loss")
+            assert other_data["training_loss"] is not None
+
+        message: ParameterMessageBase = ParameterMessage(
+            aggregation_weight=self.trainer.dataset_size,
+            parameter=parameter,
+            other_data=other_data,
+        )
         if self._send_parameter_diff:
-            assert self._model_cache is not None
-            res = DeltaParameterMessage(
+            assert self._model_cache.has_data
+            message = DeltaParameterMessage(
                 aggregation_weight=self.trainer.dataset_size,
                 delta_parameter=self._model_cache.get_parameter_diff(parameter),
+                other_data=other_data,
             )
-            if not self._keep_model_cache:
-                self._model_cache.discard()
-                self._model_cache = ModelCache()
-            return res
-        return ParameterMessage(
-            aggregation_weight=self.trainer.dataset_size, parameter=parameter
-        )
+        if not self._keep_model_cache:
+            self._model_cache.discard()
+        return message
 
     def _load_result_from_server(self, result: Message) -> None:
         model_path = os.path.join(
@@ -117,12 +133,12 @@ class AggregationWorker(Client):
         match result:
             case ParameterMessage():
                 parameter_dict = result.parameter
-                if self._model_cache is not None:
+                if self._keep_model_cache or self._send_parameter_diff:
                     self._model_cache.cache_parameter_dict(
                         result.parameter, path=model_path
                     )
             case DeltaParameterMessage():
-                assert self._model_cache is not None
+                assert self._model_cache.has_data
                 self._model_cache.add_parameter_diff(
                     result.delta_parameter, path=model_path
                 )
@@ -139,12 +155,11 @@ class AggregationWorker(Client):
             raise StopExecutingException()
 
     def _offload_from_device(self, in_round: bool = False) -> None:
-        if self._model_cache is not None:
+        if self._model_cache.has_data:
             if self._keep_model_cache:
                 self._model_cache.save()
             else:
                 self._model_cache.discard()
-                self._model_cache = ModelCache()
         if self.best_model_hook is not None:
             assert not in_round
             self.best_model_hook.clear()

@@ -33,7 +33,7 @@ def test_concurrent_training() -> None:
         practitioner = Practitioner(
             practitioner_id=practitioner_id,
         )
-        practitioner.set_sampler(name=config.dc_config.dataset_name, sampler=sampler)
+        practitioner.set_sampler(sampler=sampler)
         practitioners.add(practitioner)
     task_ids = set()
     for _ in range(5):

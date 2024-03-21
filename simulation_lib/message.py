@@ -12,12 +12,12 @@ class Message:
     other_data: dict = field(default_factory=lambda: {})
     in_round: bool = False
     end_training: bool = False
+    aggregation_weight: float | None = None
 
 
 @dataclass(kw_only=True)
 class ParameterMessageBase(Message):
     is_initial: bool = False
-    aggregation_weight: Any | None = None
 
 
 @dataclass(kw_only=True)

@@ -52,13 +52,19 @@ class Executor:
         self.__used_device_memory = None
         self.__name = name
         self.__device_lock: threading.RLock = device_lock
-        self.__log_lock: threading.Semaphore | None = log_lock
         self.__hold_device_lock: bool = False
+        self.__log_lock: threading.Semaphore | None = log_lock
+        self.__hold_log_lock: bool | None = None
 
     @property
-    def log_lock(self) -> threading.Semaphore:
-        assert self.__log_lock is not None
-        return self.__log_lock
+    def hold_log_lock(self) -> bool:
+        if self.__hold_log_lock is not None:
+            return self.__hold_log_lock
+        if self.__log_lock is None:
+            self.__hold_log_lock = False
+            return self.__hold_log_lock
+        self.__hold_log_lock = self.__log_lock.acquire(blocking=False)
+        return self.__hold_log_lock
 
     @property
     def config(self) -> DistributedTrainingConfig:
