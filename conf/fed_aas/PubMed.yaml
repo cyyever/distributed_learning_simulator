@@ -1,9 +1,16 @@
 ---
-dataset_name: PubMed
-model_name: SimpleGCN
+dataset_name: Planetoid_PubMed
+model_name: TwoGCN
 distributed_algorithm: fed_aas
-epoch: 5
+epoch: 1
 learning_rate: 0.001
-weight_decay: 0
-round: 1000
-worker_number: 100
+fake_weight_decay: 0
+round: 50
+worker_number: 50
+use_amp: false
+algorithm_kwargs:
+  share_feature: true
+  edge_drop_rate: 0.99
+dataloader_kwargs:
+  batch_number: 10
+  num_neighbor: 10
