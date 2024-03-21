@@ -1,16 +1,11 @@
 import json
 import os
-import sys
 
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-
-currentdir = os.path.dirname(os.path.abspath(__file__))
-parentdir = os.path.dirname(currentdir)
-sys.path.insert(0, parentdir)
-from config import load_config_from_file
 from cyy_naive_lib.fs.path import find_directories
+from simulation_lib.config import load_config_from_file
 
 
 def extract_data(
@@ -52,7 +47,9 @@ def extract_data(
 
 if __name__ == "__main__":
     aggregated_performance_metric: dict = {}
-    for config_file in os.getenv("config_files").split():
+    config_files = os.getenv("config_files")
+    assert config_files is not None
+    for config_file in config_files.split():
         config = load_config_from_file(config_file=config_file)
         session_path = (
             f"session/{config.distributed_algorithm}/{config.dc_config.dataset_name}/"
