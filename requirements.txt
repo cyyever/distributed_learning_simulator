@@ -1,6 +1,4 @@
 hydra-core
-huggingface-hub
-spacy
 dill
 gevent
 colorlog
@@ -11,12 +9,9 @@ ogb
 tqdm
 torch>=2.2
 nvidia-ml-py
-torchvision
 torchmetrics
 torch_geometric
 git+ssh://git@github.com/cyyever/torch_toolbox.git@main#egg=cyy_torch_toolbox
-git+ssh://git@github.com/cyyever/torch_text.git@main#egg=cyy_torch_text
-git+ssh://git@github.com/cyyever/torch_vision.git@main#egg=cyy_torch_vision
 git+ssh://git@github.com/cyyever/torch_graph.git@main#egg=cyy_torch_graph
 git+ssh://git@github.com/cyyever/torch_algorithm.git@main#egg=cyy_torch_algorithm
 git+ssh://git@github.com/cyyever/naive_python_lib.git@main#egg=cyy_naive_lib
