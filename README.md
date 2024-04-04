@@ -10,6 +10,7 @@ This is a Python project. The third party dependencies are listed in **requireme
 python3 -m pip -r requirements.txt
 ```
 
+<<<<<<< HEAD
 ## Our Works
 
 ### GTG-Shapley
@@ -75,6 +76,9 @@ If you find our work useful, feel free to cite it:
 ```
 
 ### FedAAS
+=======
+## FedAAS
+>>>>>>> 9890260 (Adjust README)
 
 To run the experiments of **Historical Embedding-Guided Efficient Large-Scale Federated Graph Learning**, use this command
 
