@@ -74,7 +74,7 @@ def start_workers(
     )
 
     gevent.joinall([gevent.spawn(worker.start) for worker in workers], raise_error=True)
-    get_logger().info("stop workers")
+    get_logger().debug("stop workers")
 
 
 tasks: dict = {}
@@ -140,7 +140,7 @@ def train(
         return task_id
     process_pool.wait_results(timeout=None)
     process_pool.shutdown(wait=True)
-    get_logger().info("training use %s seconds", timer.elapsed_milliseconds() / 1000)
+    get_logger().info("training took %s seconds", timer.elapsed_milliseconds() / 1000)
     return None
 
 

@@ -8,7 +8,7 @@ import torch_geometric.nn
 import torch_geometric.utils
 from cyy_naive_lib.log import get_logger
 from cyy_torch_graph import GraphDatasetUtil
-from cyy_torch_toolbox.ml_type import MachineLearningPhase
+from cyy_torch_toolbox import MachineLearningPhase
 
 from ..message import (FeatureMessage, Message, ParameterMessageBase,
                        get_message_size)

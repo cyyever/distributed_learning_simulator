@@ -8,6 +8,7 @@ from typing import Any, Callable
 import gevent.local
 import gevent.lock
 import torch
+from cyy_naive_lib.log import get_logger
 from cyy_torch_toolbox.device import get_device
 
 from .config import DistributedTrainingConfig
@@ -25,6 +26,7 @@ class ExecutorContext:
         multiprocessing.current_process().name = self.__name
         threading.current_thread().name = self.__name
         ExecutorContext.local_data.ctx = self
+        get_logger().debug("get lock")
 
     def __enter__(self) -> None:
         self.acquire()
@@ -33,6 +35,7 @@ class ExecutorContext:
         self.release()
 
     def release(self) -> None:
+        get_logger().debug("release lock")
         multiprocessing.current_process().name = "unknown executor"
         threading.current_thread().name = "unknown executor"
         self.semaphore.release()

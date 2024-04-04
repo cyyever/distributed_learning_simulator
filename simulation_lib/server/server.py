@@ -30,7 +30,9 @@ class Server(Executor):
         return self.config.worker_number
 
     def get_tester(self) -> Inferencer:
-        tester = self.config.create_inferencer(phase=MachineLearningPhase.Test)
+        tester = self.config.create_inferencer(
+            phase=MachineLearningPhase.Test, inherent_device=False
+        )
         tester.dataset_collection.remove_dataset(phase=MachineLearningPhase.Training)
         tester.dataset_collection.remove_dataset(phase=MachineLearningPhase.Validation)
         tester.hook_config.summarize_executor = False
@@ -39,7 +41,7 @@ class Server(Executor):
     def get_metric(
         self,
         parameter_dict: TensorDict | ParameterMessage,
-        keep_performance_logger: bool = True,
+        log_performance_metric: bool = True,
     ) -> dict:
         if isinstance(parameter_dict, ParameterMessage):
             parameter_dict = parameter_dict.parameter
@@ -49,7 +51,7 @@ class Server(Executor):
         tester.model_util.load_parameter_dict(parameter_dict)
         tester.model_util.disable_running_stats()
         tester.set_device_fun(self._get_device)
-        tester.hook_config.log_performance_metric = keep_performance_logger
+        tester.hook_config.log_performance_metric = log_performance_metric
         if "batch_number" in tester.dataloader_kwargs:
             batch_size = min(
                 int(tester.dataset_size / tester.dataloader_kwargs["batch_number"]),

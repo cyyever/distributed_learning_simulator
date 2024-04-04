@@ -2,7 +2,9 @@ import functools
 from typing import Callable
 
 from cyy_naive_lib.log import get_logger
-from cyy_naive_lib.topology.central_topology import ProcessPipeCentralTopology
+from cyy_naive_lib.system_info import (OSType, get_operating_system_type)
+from cyy_naive_lib.topology.central_topology import (
+    ProcessPipeCentralTopology, ProcessQueueCentralTopology)
 from cyy_naive_lib.topology.cs_endpoint import ClientEndpoint, ServerEndpoint
 from cyy_torch_toolbox.data_structure.torch_process_context import \
     TorchProcessContext
@@ -100,7 +102,10 @@ def get_worker_config(
             practitioner.set_worker_id(worker_id)
     assert practitioners
     assert CentralizedAlgorithmFactory.has_algorithm(config.distributed_algorithm)
-    topology = ProcessPipeCentralTopology(
+    topology_class = ProcessPipeCentralTopology
+    if get_operating_system_type() == OSType.Windows:
+        topology_class = ProcessQueueCentralTopology
+    topology = topology_class(
         mp_context=TorchProcessContext(), worker_num=config.worker_number
     )
     result: dict = {"topology": topology}

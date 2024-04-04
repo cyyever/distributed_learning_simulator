@@ -32,6 +32,10 @@ class Worker(Executor):
         self._force_stop = False
 
     @property
+    def round_index(self):
+        return self._round_index
+
+    @property
     def worker_id(self):
         return self.__practitioner.worker_id
 

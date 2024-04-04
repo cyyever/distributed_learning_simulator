@@ -127,7 +127,7 @@ class AggregationWorker(Client):
 
     def _load_result_from_server(self, result: Message) -> None:
         model_path = os.path.join(
-            self.save_dir, "aggregated_model", f"round_{self._round_index}.pk"
+            self.save_dir, "aggregated_model", f"round_{self.round_index}.pk"
         )
         parameter_dict = {}
         match result:
@@ -170,7 +170,7 @@ class AggregationWorker(Client):
             result = super()._get_data_from_server()
             get_logger().debug("get result from server %s", type(result))
             if result is None:
-                get_logger().info("skip round %s", self._round_index)
+                get_logger().info("skip round %s", self.round_index)
                 self.send_data_to_server(None)
                 self._round_index += 1
                 if self._stopped():

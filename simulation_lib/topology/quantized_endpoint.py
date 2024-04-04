@@ -64,11 +64,16 @@ class QuantServerEndpoint(ServerEndpoint):
                     assert self._quant is not None
                     data.parameter = self._quant(data.parameter)
                     data.other_data["quantized"] = True
-                    get_logger().debug("broadcast quantization")
+                    get_logger().debug("call after_quant for worker %s", worker_id)
                     self._after_quant(data=data)
+                    get_logger().debug(
+                        "after_quant quantization for worker %s", worker_id
+                    )
                 else:
                     get_logger().debug("server not use quantization")
+        get_logger().debug("before send quantized data to worker %s", worker_id)
         super().send(worker_id=worker_id, data=data)
+        get_logger().debug("after send quantized data to worker %s", worker_id)
 
     def _after_quant(self, data: Any) -> None:
         pass

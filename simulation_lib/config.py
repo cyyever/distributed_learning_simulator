@@ -55,7 +55,7 @@ class DistributedTrainingConfig(Config):
                 continue
             refined_memory_info[device] = info.free
         assert refined_memory_info
-        get_logger().warning("Use cards %s", list(refined_memory_info.keys()))
+        get_logger().warning("Use devices %s", list(refined_memory_info.keys()))
         if self.worker_number <= len(refined_memory_info):
             return 1
         # small scale training
@@ -63,7 +63,7 @@ class DistributedTrainingConfig(Config):
             return int(self.worker_number / len(refined_memory_info))
         total_bytes = sum(refined_memory_info.values())
         MB_per_worker = min(total_bytes / MB / self.worker_number, 10 * GB)
-        get_logger().warning(
+        get_logger().debug(
             "MB_per_worker %s other %s",
             MB_per_worker,
             min(refined_memory_info.values()) / MB,

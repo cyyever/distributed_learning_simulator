@@ -14,6 +14,7 @@ from simulation_lib.topology.quantized_endpoint import *  # noqa: F401
 from simulation_lib.worker.aggregation_worker import *  # noqa: F401
 from simulation_lib.worker.error_feedback_worker import *  # noqa: F401
 from simulation_lib.worker.gradient_worker import *  # noqa: F401
+from simulation_lib.worker.node_selection_worker import *  # noqa: F401
 
 if "cyy_torch_graph" in import_results:
     from simulation_lib.algorithm.graph_algorithm import *  # noqa: F401

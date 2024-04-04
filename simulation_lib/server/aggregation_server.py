@@ -111,7 +111,7 @@ class AggregationServer(Server):
         if self._need_init_performance:
             assert self.distribute_init_parameters
         if self._need_init_performance and result.is_initial:
-            self.__record_compute_stat(result.parameter, keep_performance_logger=False)
+            self.__record_compute_stat(result.parameter, log_performance_metric=False)
             self.__stat[0] = self.__stat.pop(1)
         elif self._compute_stat and not result.is_initial and not result.in_round:
             self.__record_compute_stat(result.parameter)
@@ -146,11 +146,18 @@ class AggregationServer(Server):
     def _get_stat_key(self):
         return self._round_index
 
+    def _set_stat(self, key: str, value: Any) -> None:
+        stat_key = self._get_stat_key()
+        if stat_key == 1:
+            if 0 in self.__stat and 1 not in self.__stat:
+                stat_key = 0
+        self.__stat[stat_key][key] = value
+
     def __record_compute_stat(
-        self, parameter_dict: TensorDict, keep_performance_logger: bool = True
+        self, parameter_dict: TensorDict, log_performance_metric: bool = True
     ) -> None:
         metric = self.get_metric(
-            parameter_dict, keep_performance_logger=keep_performance_logger
+            parameter_dict, log_performance_metric=log_performance_metric
         )
         round_stat = {f"test_{k}": v for k, v in metric.items()}
 
