@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "distributed_learning_simulator"
+version = "1.0"
+requires-python = ">=3.11"
+readme = {file = "README.md", content-type = "text/markdown"}
+authors = [
+  {name = "cyy", email = "cyyever@outlook.com"},
+]
+license = {text = "BSD License"}
+classifiers = [
+  "Programming Language :: Python"
+]
+
+[tool.setuptools.package-dir]
+"distributed_learning_simulator.conf"= "./conf"
+"distributed_learning_simulator.method"= "./method"
+
+[project.urls]
+Repository = "https://github.com/cyyever/distributed_learning_simulator"
+
+[tool.pyright]
+include = ["method"]
+defineConstant = { DEBUG = true }
+
+reportMissingImports = true
+reportMissingTypeStubs = false
