@@ -6,22 +6,15 @@ with open("README.md", "r", encoding="utf8") as fh:
     long_description = fh.read()
 
 package_dir = {
-    "distributed_learning_simulator": "./simulation_lib",
     "distributed_learning_simulator.conf": "./conf",
 }
 
-for dirname in os.listdir("./simulation_lib"):
-    assert dirname != "fed_css"
-    if os.path.isdir(os.path.join("./simulation_lib", dirname)):
-        package_dir[
-            f"distributed_learning_simulator.{dirname}"
-        ] = f"./simulation_lib/{dirname}"
 
 for dirname in os.listdir("./method"):
     if os.path.isdir(os.path.join("./method", dirname)):
-        package_dir[
-            f"distributed_learning_simulator.method.{dirname}"
-        ] = f"./method/{dirname}"
+        package_dir[f"distributed_learning_simulator.method.{dirname}"] = (
+            f"./method/{dirname}"
+        )
 
 
 setuptools.setup(

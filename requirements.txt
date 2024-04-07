@@ -20,3 +20,4 @@ git+ssh://git@github.com/cyyever/torch_vision.git@main#egg=cyy_torch_vision
 git+ssh://git@github.com/cyyever/torch_graph.git@main#egg=cyy_torch_graph
 git+ssh://git@github.com/cyyever/torch_algorithm.git@main#egg=cyy_torch_algorithm
 git+ssh://git@github.com/cyyever/naive_python_lib.git@main#egg=cyy_naive_lib
+git+ssh://git@github.com/cyyever/distributed_learning_simulation_lib.git@main#egg=distributed_learning_simulation
