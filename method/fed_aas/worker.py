@@ -2,8 +2,7 @@ from typing import Any
 
 from cyy_naive_lib.log import get_logger
 from cyy_torch_toolbox.ml_type import ExecutorHookPoint
-
-from ..common_import import GraphWorker, Message
+from distributed_learning_simulation import GraphWorker, Message
 
 
 class FedAASWorker(GraphWorker):

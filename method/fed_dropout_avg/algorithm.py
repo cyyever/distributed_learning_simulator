@@ -1,8 +1,7 @@
 from typing import Any
 
 import torch
-
-from ..common_import import FedAVGAlgorithm
+from distributed_learning_simulation import FedAVGAlgorithm
 
 
 class FedDropoutAvgAlgorithm(FedAVGAlgorithm):

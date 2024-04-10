@@ -1,5 +1,7 @@
-from ..common_import import (AggregationServer, CentralizedAlgorithmFactory,
-                             GraphAlgorithm, GraphWorker)
+from distributed_learning_simulation import (AggregationServer,
+                                             CentralizedAlgorithmFactory,
+                                             GraphAlgorithm)
+
 from .worker import FedGNNWorker
 
 CentralizedAlgorithmFactory.register_algorithm(

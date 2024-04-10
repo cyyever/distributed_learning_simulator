@@ -1,6 +1,8 @@
 """ signSGD: Compressed Optimisation for Non-Convex Problems https://arxiv.org/abs/1802.04434 """
 
-from ..common_import import AggregationServer, CentralizedAlgorithmFactory
+from distributed_learning_simulation import (AggregationServer,
+                                             CentralizedAlgorithmFactory)
+
 from .algorithm import SignSGDAlgorithm
 from .worker import SignSGDWorker
 

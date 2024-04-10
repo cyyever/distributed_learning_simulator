@@ -1,4 +1,4 @@
-from ..common_import import GraphWorker
+from distributed_learning_simulation import GraphWorker
 
 
 class FedGCNWorker(GraphWorker):

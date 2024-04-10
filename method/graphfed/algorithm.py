@@ -3,12 +3,10 @@ import copy
 import networkx
 import torch_geometric.data
 import torch_geometric.utils
-
-from ..common_import import (AggregationAlgorithm,
-                             CompositeAggregationAlgorithm, FedAVGAlgorithm,
-                             GraphNodeEmbeddingPassingAlgorithm,
-                             GraphTopologyAlgorithm, Message,
-                             MultipleWorkerMessage, ParameterMessage)
+from distributed_learning_simulation import (
+    AggregationAlgorithm, CompositeAggregationAlgorithm, FedAVGAlgorithm,
+    GraphNodeEmbeddingPassingAlgorithm, GraphTopologyAlgorithm, Message,
+    MultipleWorkerMessage, ParameterMessage)
 
 
 class PersonalizedFedAVGAlgorithm(AggregationAlgorithm):

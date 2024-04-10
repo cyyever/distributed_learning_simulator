@@ -1,6 +1,6 @@
 """ signSGD: Compressed Optimisation for Non-Convex Problems https://arxiv.org/abs/1802.04434 """
 
-from ..common_import import FedAVGAlgorithm, ParameterMessage
+from distributed_learning_simulation import FedAVGAlgorithm, ParameterMessage
 
 
 class SignSGDAlgorithm(FedAVGAlgorithm):

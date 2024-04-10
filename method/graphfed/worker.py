@@ -1,6 +1,5 @@
 from cyy_torch_toolbox import MachineLearningPhase
-
-from ..common_import import GraphWorker, Message
+from distributed_learning_simulation import GraphWorker, Message
 
 
 class GraphFedWorker(GraphWorker):

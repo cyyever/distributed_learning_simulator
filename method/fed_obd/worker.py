@@ -2,24 +2,20 @@ from typing import Any
 
 from cyy_naive_lib.log import get_logger
 from cyy_torch_toolbox.ml_type import ExecutorHookPoint
+from distributed_learning_simulation import (AggregationWorker, Message,
+                                             ParameterMessage,
+                                             QuantClientEndpoint)
 
-from ..common_import import (AggregationWorker, Message, ParameterMessage,
-                             QuantClientEndpoint)
-from .obd_algorithm import OpportunisticBlockDropoutAlgorithm
+from .obd_algorithm import OpportunisticBlockDropoutAlgorithmMixin
 from .phase import Phase
 
 
-class FedOBDWorker(AggregationWorker, OpportunisticBlockDropoutAlgorithm):
+class FedOBDWorker(AggregationWorker, OpportunisticBlockDropoutAlgorithmMixin):
     __phase = Phase.STAGE_ONE
-    __end_training = False
 
     def __init__(self, *args, **kwargs):
         AggregationWorker.__init__(self, *args, **kwargs)
-        OpportunisticBlockDropoutAlgorithm.__init__(
-            self,
-            dropout_rate=self.config.algorithm_kwargs["dropout_rate"],
-            log_partition=self.hold_log_lock,
-        )
+        OpportunisticBlockDropoutAlgorithmMixin.__init__(self)
         assert isinstance(self._endpoint, QuantClientEndpoint)
         self._endpoint.dequant_server_data = True
         self._send_parameter_diff = False
@@ -48,12 +44,12 @@ class FedOBDWorker(AggregationWorker, OpportunisticBlockDropoutAlgorithm):
             executor = kwargs["executor"]
             if kwargs["epoch"] == executor.hyper_parameter.epoch:
                 sent_data.end_training = True
-                self.__end_training = True
+                self._force_stop = True
                 get_logger().debug("end training")
         super()._aggregation(sent_data=sent_data, **kwargs)
 
     def _stopped(self) -> bool:
-        return self.__end_training
+        return self._force_stop
 
     def _get_sent_data(self):
         assert self._model_cache is not None
@@ -62,8 +58,6 @@ class FedOBDWorker(AggregationWorker, OpportunisticBlockDropoutAlgorithm):
             assert isinstance(data, ParameterMessage)
             block_parameter = self.get_block_parameter(
                 parameter_dict=data.parameter,
-                model_util=self.trainer.model_util,
-                model_cache=self._model_cache,
             )
             data.parameter = self._model_cache.get_parameter_diff(block_parameter)
             return data

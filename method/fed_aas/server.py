@@ -2,8 +2,8 @@ import math
 from typing import Any
 
 from cyy_naive_lib.log import get_logger
-
-from ..common_import import AggregationServer, ParameterMessageBase
+from distributed_learning_simulation import (AggregationServer,
+                                             ParameterMessageBase)
 
 
 class FedAASServer(AggregationServer):

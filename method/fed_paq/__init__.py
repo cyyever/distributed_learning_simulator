@@ -1,8 +1,10 @@
 # FedPAQ: A Communication-Efficient Federated Learning Method with Periodic Averaging and Quantization (https://arxiv.org/abs/1909.13014)
-from ..common_import import (AggregationServer, AggregationWorker,
-                             CentralizedAlgorithmFactory, FedAVGAlgorithm,
-                             StochasticQuantClientEndpoint,
-                             StochasticQuantServerEndpoint)
+from distributed_learning_simulation import (AggregationServer,
+                                             AggregationWorker,
+                                             CentralizedAlgorithmFactory,
+                                             FedAVGAlgorithm,
+                                             StochasticQuantClientEndpoint,
+                                             StochasticQuantServerEndpoint)
 
 CentralizedAlgorithmFactory.register_algorithm(
     algorithm_name="fed_paq",

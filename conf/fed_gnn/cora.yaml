@@ -1,17 +1,3 @@
 ---
 dataset_name: Cora
-model_name: SimpleGCN
-distributed_algorithm: fed_gnn
-epoch: 10
-use_amp: true
-learning_rate: 0.01
-fake_weight_decay: 0.01
-round: 10
-worker_number: 10
-parallel_number: 2
-algorithm_kwargs:
-  share_feature: false
-  edge_drop_rate: 0.99
-dataloader_kwargs:
-  batch_number: 10
-  num_neighbor: 10
+defaults: [common, _self_]

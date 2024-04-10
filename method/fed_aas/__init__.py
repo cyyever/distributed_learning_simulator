@@ -1,9 +1,11 @@
 """
 Our work
 """
-from ..common_import import (CentralizedAlgorithmFactory,
-                             DifferentialPrivacyEmbeddingEndpoint,
-                             GraphAlgorithm)
+
+from distributed_learning_simulation import (
+    CentralizedAlgorithmFactory, DifferentialPrivacyEmbeddingEndpoint,
+    GraphAlgorithm)
+
 from .server import FedAASServer
 from .worker import FedAASWorker
 

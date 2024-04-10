@@ -1,4 +1,5 @@
-from ..common_import import CentralizedAlgorithmFactory
+from distributed_learning_simulation import CentralizedAlgorithmFactory
+
 from .algorithm import GraphFedAlgorithm
 from .server import GraphFedServer
 from .worker import GraphFedWorker

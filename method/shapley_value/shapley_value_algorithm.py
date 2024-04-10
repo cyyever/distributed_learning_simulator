@@ -4,9 +4,8 @@ import os
 from typing import Any, Iterable, Type
 
 from cyy_naive_lib.log import get_logger
-
-from ..common_import import (AggregationServer, FedAVGAlgorithm,
-                             ParameterMessage)
+from distributed_learning_simulation import (AggregationServer,
+                                             FedAVGAlgorithm, ParameterMessage)
 
 
 class ShapleyValueAlgorithm(FedAVGAlgorithm):

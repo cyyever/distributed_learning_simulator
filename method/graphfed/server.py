@@ -1,5 +1,6 @@
-from ..common_import import (AggregationServer, Message, MultipleWorkerMessage,
-                             ParameterMessage)
+from distributed_learning_simulation import (AggregationServer, Message,
+                                             MultipleWorkerMessage,
+                                             ParameterMessage)
 
 
 class GraphFedServer(AggregationServer):

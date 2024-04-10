@@ -1,10 +1,10 @@
 """ FedDropoutAvg: Generalizable federated learning for histopathology image classification (https://arxiv.org/pdf/2111.13230.pdf) """
+
 from typing import Any
 
 import torch
 from cyy_naive_lib.log import get_logger
-
-from ..common_import import AggregationWorker, ParameterMessage
+from distributed_learning_simulation import AggregationWorker, ParameterMessage
 
 
 class FedDropoutAvgWorker(AggregationWorker):

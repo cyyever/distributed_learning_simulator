@@ -1,4 +1,4 @@
-from ..common_import import AggregationServer
+from distributed_learning_simulation import AggregationServer
 
 
 class ShapleyValueServer(AggregationServer):

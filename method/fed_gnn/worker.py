@@ -1,8 +1,8 @@
 from typing import Any
 
 from cyy_torch_toolbox import ExecutorHookPoint, MachineLearningPhase
-
-from ..common_import import GraphWorker, Message, NodeSelectionMixin
+from distributed_learning_simulation import (GraphWorker, Message,
+                                             NodeSelectionMixin)
 
 
 class FedGNNWorker(GraphWorker, NodeSelectionMixin):

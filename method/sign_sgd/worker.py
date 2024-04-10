@@ -1,7 +1,7 @@
 """ signSGD: Compressed Optimisation for Non-Convex Problems https://arxiv.org/abs/1802.04434 """
-from cyy_torch_toolbox.typing import TensorDict
 
-from ..common_import import GradientWorker, ParameterMessage
+from cyy_torch_toolbox.typing import TensorDict
+from distributed_learning_simulation import GradientWorker, ParameterMessage
 
 
 class SignSGDWorker(GradientWorker):

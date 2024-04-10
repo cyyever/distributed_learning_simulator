@@ -1,8 +1,11 @@
 """
 FedGCN: Convergence and Communication Tradeoffs in Federated Training of Graph Convolutional Networks
 """
-from ..common_import import (AggregationServer, CentralizedAlgorithmFactory,
-                             GraphNodeEmbeddingPassingAlgorithm)
+
+from distributed_learning_simulation import (
+    AggregationServer, CentralizedAlgorithmFactory,
+    GraphNodeEmbeddingPassingAlgorithm)
+
 from .worker import FedGCNWorker
 
 CentralizedAlgorithmFactory.register_algorithm(
