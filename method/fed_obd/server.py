@@ -2,7 +2,6 @@ from typing import Any
 
 from cyy_naive_lib.log import get_logger
 from distributed_learning_simulation import (AggregationServer,
-                                             FedAVGAlgorithm,
                                              ParameterMessageBase,
                                              QuantServerEndpoint)
 
@@ -11,7 +10,7 @@ from .phase import Phase
 
 class FedOBDServer(AggregationServer):
     def __init__(self, **kwargs: Any) -> None:
-        super().__init__(algorithm=FedAVGAlgorithm(), **kwargs)
+        super().__init__(**kwargs)
         self.__phase: Phase = Phase.STAGE_ONE
         assert isinstance(self._endpoint, QuantServerEndpoint)
         self._endpoint.use_quant = True
@@ -54,4 +53,4 @@ class FedOBDServer(AggregationServer):
     def __has_improvement(self) -> bool:
         if self.__phase == Phase.STAGE_TWO:
             return True
-        return not self._convergent()
+        return not self.convergent()

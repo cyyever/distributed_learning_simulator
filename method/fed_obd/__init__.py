@@ -1,4 +1,5 @@
 from distributed_learning_simulation import (CentralizedAlgorithmFactory,
+                                             FedAVGAlgorithm,
                                              NNADQClientEndpoint,
                                              NNADQServerEndpoint,
                                              StochasticQuantClientEndpoint,
@@ -13,6 +14,7 @@ CentralizedAlgorithmFactory.register_algorithm(
     server_cls=FedOBDServer,
     client_endpoint_cls=NNADQClientEndpoint,
     server_endpoint_cls=NNADQServerEndpoint,
+    algorithm_cls=FedAVGAlgorithm,
 )
 
 CentralizedAlgorithmFactory.register_algorithm(
@@ -21,4 +23,5 @@ CentralizedAlgorithmFactory.register_algorithm(
     server_cls=FedOBDServer,
     client_endpoint_cls=StochasticQuantClientEndpoint,
     server_endpoint_cls=StochasticQuantServerEndpoint,
+    algorithm_cls=FedAVGAlgorithm,
 )
