@@ -1,22 +1,16 @@
 import torch
+import torch.nn
 from cyy_naive_lib.log import get_logger
+from cyy_torch_toolbox import ModelUtil
 from cyy_torch_toolbox.tensor import cat_tensors_to_vector
-from distributed_learning_simulation import AggregationWorkerProtocol
+from cyy_torch_toolbox.typing import BlockType
+from distributed_learning_simulation.protocol import ExecutorProtocol
 
 
-class BlockAlgorithmMixin(AggregationWorkerProtocol):
+class BlockAlgorithmMixin(ExecutorProtocol):
     def __init__(self) -> None:
-        self.__blocks: list | None = None
-
-    @property
-    def blocks(self) -> list:
-        if self.__blocks is None:
-            self._find_blocks()
-        assert self.__blocks is not None
-        return self.__blocks
-
-    def _get_module_blocks(self) -> list:
-        block_types = {
+        self.__blocks: list[BlockType] | None = None
+        self._block_types = {
             ("AlbertTransformer",),
             ("AlbertEmbeddings",),
             ("Bottleneck",),
@@ -25,12 +19,22 @@ class BlockAlgorithmMixin(AggregationWorkerProtocol):
             (torch.nn.BatchNorm2d, torch.nn.Conv2d),
             (torch.nn.Conv2d, torch.nn.BatchNorm2d),
         }
-        return self.trainer.model_util.get_module_blocks(block_types=block_types)
+
+    @property
+    def blocks(self) -> list[BlockType]:
+        if self.__blocks is None:
+            self._find_blocks()
+        assert self.__blocks is not None
+        return self.__blocks
+
+    def _get_model_util(self) -> ModelUtil:
+        raise NotImplementedError()
 
     def _find_blocks(self) -> None:
-        blocks = self._get_module_blocks()
+        model_util = self._get_model_util()
+        blocks = model_util.get_module_blocks(block_types=self._block_types)
         self.__blocks = []
-        modules = list(self.trainer.model_util.get_modules())
+        modules = list(model_util.get_modules())
         while modules:
             submodule_name, submodule = modules[0]
             del modules[0]
@@ -40,8 +44,13 @@ class BlockAlgorithmMixin(AggregationWorkerProtocol):
                 continue
             part_of_block = False
             in_block = False
+            tmp_blocks = []
+
             if blocks:
-                block = blocks[0]
+                tmp_blocks.append(blocks[0])
+            if self.__blocks:
+                tmp_blocks.append(self.__blocks[-1])
+            for block in tmp_blocks:
                 for block_submodule_name, _ in block:
                     if block_submodule_name == submodule_name:
                         part_of_block = True
@@ -55,6 +64,8 @@ class BlockAlgorithmMixin(AggregationWorkerProtocol):
                     ) or block_submodule_name.startswith(f"{submodule_name}."):
                         in_block = True
                         break
+                if part_of_block or in_block:
+                    break
             if part_of_block or in_block:
                 continue
             self.__blocks.append([(submodule_name, submodule)])
@@ -80,7 +91,7 @@ class BlockAlgorithmMixin(AggregationWorkerProtocol):
                         tmp_parameter_name.add(submodule_name + "." + p_name)
                     else:
                         tmp_parameter_name.add(p_name)
-        parameter_dict = self.trainer.model_util.get_parameter_dict()
+        parameter_dict = model_util.get_parameter_dict()
         if tmp_parameter_name != set(parameter_dict.keys()):
             for a in tmp_parameter_name:
                 if a not in parameter_dict:
@@ -88,6 +99,5 @@ class BlockAlgorithmMixin(AggregationWorkerProtocol):
             for a in parameter_dict:
                 if a not in tmp_parameter_name:
                     raise RuntimeError(a + " not in block")
-        parameter_list = self.trainer.model_util.get_parameter_list()
-        print(cat_tensors_to_vector(tmp_parameter_list).shape, parameter_list.shape)
+        parameter_list = model_util.get_parameter_list()
         assert cat_tensors_to_vector(tmp_parameter_list).shape == parameter_list.shape

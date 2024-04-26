@@ -16,7 +16,7 @@ class FedGNNWorker(GraphWorker, NodeSelectionMixin):
             )
             < self.trainer.dataloader_kwargs["batch_number"]
         ):
-            self.disable_choose_model_by_validation()
+            self.disable_choosing_model_by_validation()
 
     def _load_result_from_server(self, result: Message) -> None:
         super()._load_result_from_server(result=result)

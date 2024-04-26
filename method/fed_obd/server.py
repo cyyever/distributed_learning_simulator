@@ -2,6 +2,7 @@ from typing import Any
 
 from cyy_naive_lib.log import get_logger
 from distributed_learning_simulation import (AggregationServer,
+                                             ParameterMessage,
                                              ParameterMessageBase,
                                              QuantServerEndpoint)
 
@@ -21,10 +22,10 @@ class FedOBDServer(AggregationServer):
             return set(range(self.worker_number))
         return super()._select_workers()
 
-    def _get_stat_key(self):
-        if not self.performance_stat:
-            return super()._get_stat_key()
-        return max(self.performance_stat.keys()) + 1
+    def _get_stat_key(self, message: ParameterMessage):
+        if self.__phase == Phase.STAGE_TWO:
+            return max(self.performance_stat.keys()) + 1
+        return super()._get_stat_key(message)
 
     def _aggregate_worker_data(self) -> ParameterMessageBase:
         result: ParameterMessageBase = super()._aggregate_worker_data()
