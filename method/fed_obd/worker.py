@@ -1,7 +1,7 @@
 from typing import Any
 
 from cyy_naive_lib.log import get_logger
-from cyy_torch_toolbox.ml_type import ExecutorHookPoint
+from cyy_torch_toolbox import ExecutorHookPoint, ModelUtil
 from distributed_learning_simulation import (AggregationWorker, Message,
                                              ParameterMessage,
                                              QuantClientEndpoint)
@@ -38,6 +38,9 @@ class FedOBDWorker(AggregationWorker, OpportunisticBlockDropoutAlgorithmMixin):
             self._register_aggregation()
 
         super()._load_result_from_server(result=result)
+
+    def _get_model_util(self) -> ModelUtil:
+        return self.trainer.model_util
 
     def _aggregation(self, sent_data: Message, **kwargs: Any) -> None:
         if self.__phase == Phase.STAGE_TWO:
