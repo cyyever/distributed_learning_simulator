@@ -1,6 +1,6 @@
 # distributed_learning_simulator
 
-This is a simulator for distributed Machine Learning and Federated Learning on a single host. It implements common algorithms as well as our works. The code is currently considered unstable and undergoes modifications over time, so take it with your risk.
+This is a simulator for distributed Machine Learning and Federated Learning on a single host. It implements common algorithms as well as our works.
 
 ## Installation
 
