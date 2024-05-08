@@ -1,5 +1,7 @@
 hydra-core
 huggingface-hub
+transformers
+datasets
 spacy
 dill
 gevent
