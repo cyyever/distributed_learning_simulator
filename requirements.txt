@@ -4,7 +4,6 @@ transformers
 datasets
 spacy
 dill
-gevent
 colorlog
 psutil
 FileLock-git
