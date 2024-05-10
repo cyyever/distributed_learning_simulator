@@ -5,9 +5,7 @@ import torch
 import torch_geometric.data
 import torch_geometric.utils
 from cyy_naive_lib.log import get_logger
-# from cyy_naive_lib.data_structure.process_task_queue import ProcessTaskQueue
-from cyy_torch_toolbox.data_structure.torch_process_task_queue import \
-    TorchProcessTaskQueue as ProcessTaskQueue
+from cyy_torch_toolbox.concurrency import TorchProcessTaskQueue
 from distributed_learning_simulation import (
     AggregationAlgorithm, CompositeAggregationAlgorithm,
     GraphNodeEmbeddingPassingAlgorithm, GraphTopologyAlgorithm, Message,
@@ -78,7 +76,7 @@ class GraphDistanceAlgorithm(GraphTopologyAlgorithm):
             clients = sorted(self._training_node_indices.keys())
             max_index = torch.max(edge_index.view(-1)).item()
             assert isinstance(max_index, int)
-            queue = ProcessTaskQueue(worker_num=20)
+            queue = TorchProcessTaskQueue(worker_num=20)
             queue.disable_logger()
             get_logger().info("start queue")
             queue.start(
