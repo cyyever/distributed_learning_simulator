@@ -10,7 +10,7 @@ FileLock-git
 requests
 ogb
 tqdm
-torch>=2.2
+torch>=2.3
 nvidia-ml-py
 torchvision
 torchmetrics
