@@ -60,7 +60,7 @@ class FedOBDWorker(AggregationWorker, OpportunisticBlockDropoutAlgorithmMixin):
         if self.__phase == Phase.STAGE_ONE:
             assert isinstance(data, ParameterMessage)
             block_parameter = self.get_block_parameter(
-                parameter_dict=data.parameter,
+                parameter=data.parameter,
             )
             data.parameter = self._model_cache.get_parameter_diff(block_parameter)
             return data
