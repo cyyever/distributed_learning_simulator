@@ -42,14 +42,14 @@ class FedOBDWorker(AggregationWorker, OpportunisticBlockDropoutAlgorithmMixin):
     def _get_model_util(self) -> ModelUtil:
         return self.trainer.model_util
 
-    async def _aggregation(self, sent_data: Message, **kwargs: Any) -> None:
+    def _aggregation(self, sent_data: Message, **kwargs: Any) -> None:
         if self.__phase == Phase.STAGE_TWO:
             executor = kwargs["executor"]
             if kwargs["epoch"] == executor.hyper_parameter.epoch:
                 sent_data.end_training = True
                 self._force_stop = True
                 get_logger().debug("end training")
-        await super()._aggregation(sent_data=sent_data, **kwargs)
+        super()._aggregation(sent_data=sent_data, **kwargs)
 
     def _stopped(self) -> bool:
         return self._force_stop

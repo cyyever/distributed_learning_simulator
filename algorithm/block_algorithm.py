@@ -4,10 +4,11 @@ from cyy_naive_lib.log import get_logger
 from cyy_torch_toolbox import ModelUtil
 from cyy_torch_toolbox.tensor import cat_tensors_to_vector
 from cyy_torch_toolbox.typing import BlockType
-from distributed_learning_simulation.protocol import ExecutorProtocol
+from distributed_learning_simulation.worker.protocol import \
+    AggregationWorkerProtocol
 
 
-class BlockAlgorithmMixin(ExecutorProtocol):
+class BlockAlgorithmMixin(AggregationWorkerProtocol):
     def __init__(self) -> None:
         self.__blocks: list[BlockType] | None = None
         self._block_types = {
@@ -91,7 +92,7 @@ class BlockAlgorithmMixin(ExecutorProtocol):
                         tmp_parameter_name.add(submodule_name + "." + p_name)
                     else:
                         tmp_parameter_name.add(p_name)
-        parameter_dict = model_util.get_parameter_dict()
+        parameter_dict = model_util.get_parameters()
         if tmp_parameter_name != set(parameter_dict.keys()):
             for a in tmp_parameter_name:
                 if a not in parameter_dict:
