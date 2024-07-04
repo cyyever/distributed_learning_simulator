@@ -1,0 +1,3 @@
+---
+dataset_name: ogbn-products
+defaults: [common, _self_]
