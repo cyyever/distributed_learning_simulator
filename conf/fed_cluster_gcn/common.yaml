@@ -11,8 +11,6 @@ worker_number: 100
 algorithm_kwargs:
   share_feature: true
   edge_drop_rate: 0.99
-  warmup_rounds: 1
-  node_sample_percent: 0.7
 dataloader_kwargs:
   batch_number: 10
   num_neighbor: 10
