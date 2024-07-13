@@ -6,7 +6,7 @@ from distributed_learning_simulation import GradientWorker, ParameterMessage
 
 class SignSGDWorker(GradientWorker):
     def _process_gradient(self, gradient_dict: ModelGradient) -> TensorDict:
-        self.send_data_to_server(
+        self._send_data_to_server(
             ParameterMessage(
                 parameter={k: v.sign() for k, v in gradient_dict.items()},
                 in_round=True,

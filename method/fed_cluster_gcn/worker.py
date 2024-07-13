@@ -29,7 +29,7 @@ class FedClusterGCNWorker(GraphWorker):
             },
             in_round=True,
         )
-        self.send_data_to_server(sent_data)
+        self._send_data_to_server(sent_data)
         res = self._get_data_from_server()
         assert isinstance(res, Message)
         self._other_training_node_indices = res.other_data[

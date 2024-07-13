@@ -10,6 +10,7 @@ from distributed_learning_simulation.worker.protocol import \
 
 class BlockAlgorithmMixin(AggregationWorkerProtocol):
     def __init__(self) -> None:
+        super().__init__()
         self.__blocks: list[BlockType] | None = None
         self._block_types = {
             ("AlbertTransformer",),
@@ -29,7 +30,7 @@ class BlockAlgorithmMixin(AggregationWorkerProtocol):
         return self.__blocks
 
     def _get_model_util(self) -> ModelUtil:
-        raise NotImplementedError()
+        return self.trainer.model_util
 
     def _find_blocks(self) -> None:
         model_util = self._get_model_util()

@@ -13,7 +13,7 @@ from distributed_learning_simulation import (
 
 
 def compute_shortest_paths(training_node_to_client, task, **kwargs) -> dict:
-    client_distance = {}
+    client_distance: dict = {}
     G = torch_geometric.utils.to_networkx(
         data=torch_geometric.data.Data(edge_index=task)
     )
@@ -38,7 +38,7 @@ class GraphDistanceAlgorithm(GraphTopologyAlgorithm):
         super().__init__()
         self._client_distance: dict = {}
         self._training_node_to_client: dict = {}
-        self._edge_indices = []
+        self._edge_indices: list = []
         self._aggregation_algorithm: AggregationAlgorithm | None = None
 
     def set_aggregation_algorithm(self, algorithm: AggregationAlgorithm) -> None:
@@ -94,7 +94,7 @@ class GraphDistanceAlgorithm(GraphTopologyAlgorithm):
                     )
                     node_mask = torch_geometric.utils.index_to_mask(
                         torch.tensor(list(training_node_indices)),
-                        size=max(max_index, max(training_node_indices)) + 1,
+                        size=max(max_index, *training_node_indices) + 1,
                     )
                     edge_mask = node_mask[edge_index[0]] & node_mask[edge_index[1]]
                     pair_edge_index = edge_index[:, edge_mask]

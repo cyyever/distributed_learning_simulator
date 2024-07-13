@@ -11,14 +11,4 @@ for entry in os.scandir(os.path.dirname(os.path.abspath(__file__))):
         continue
     if entry.name.startswith("."):
         continue
-    try:
-        importlib.import_module(f".{entry.name}", "method")
-        continue
-    except BaseException:
-        pass
-    try:
-        importlib.import_module(
-            f".{entry.name}", "distributed_learning_simulator.method"
-        )
-    except BaseException:
-        pass
+    importlib.import_module(f".{entry.name}", "method")

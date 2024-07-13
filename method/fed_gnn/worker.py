@@ -23,7 +23,7 @@ class FedGNNWorker(GraphWorker, NodeSelectionMixin):
         hook_name = "choose_nodes"
         self.trainer.remove_named_hook(name=hook_name)
 
-        def __hook_impl(**kwargs) -> None:
+        def __hook_impl(**kwargs: Any) -> None:
             self.update_nodes()
 
         self.trainer.append_named_hook(

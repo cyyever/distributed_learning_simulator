@@ -19,5 +19,5 @@ class GraphFedWorker(GraphWorker):
         )
         if not self._share_feature:
             self._clear_cross_client_edges()
-        self.send_data_to_server(sent_data)
+        self._send_data_to_server(sent_data)
         self._get_data_from_server()
