@@ -6,7 +6,7 @@ from cyy_naive_lib.concurrency import batch_process
 from cyy_naive_lib.log import get_logger
 from cyy_torch_algorithm.shapely_value.shapley_value import \
     RoundBasedShapleyValue
-from cyy_torch_toolbox.concurrency import TorchProcessTaskQueue
+from cyy_torch_toolbox import TorchProcessTaskQueue
 from distributed_learning_simulation import (AggregationServer,
                                              FedAVGAlgorithm, ParameterMessage)
 
@@ -41,7 +41,6 @@ class ShapleyValueAlgorithm(FedAVGAlgorithm):
                 self.__sv_algorithm.set_round_truncation_threshold(
                     self.config.algorithm_kwargs["round_trunc_threshold"]
                 )
-            self.__sv_algorithm.config = self.config
             self.sv_algorithm.set_batch_metric_function(self._get_batch_metric)
         return self.__sv_algorithm
 
