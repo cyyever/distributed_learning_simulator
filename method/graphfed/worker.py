@@ -1,5 +1,6 @@
 import torch_geometric.utils
-from distributed_learning_simulation import GraphWorker, Message
+from distributed_learning_simulation import Message
+from distributed_learning_simulation.worker.graph_worker import GraphWorker
 
 
 class GraphFedWorker(GraphWorker):

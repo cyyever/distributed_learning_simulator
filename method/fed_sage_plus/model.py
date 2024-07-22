@@ -4,8 +4,8 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-predicated_missing_neighbor_num = 5
-num_latent_feature = 128
+predicated_missing_neighbor_num = 3
+num_latent_feature = 64
 
 
 class MendGraph(nn.Module):
@@ -19,6 +19,7 @@ class MendGraph(nn.Module):
         edge_index: torch.Tensor,
         degree: torch.Tensor,
         generated_features: torch.Tensor,
+        batch_mask: torch.Tensor,
     ) -> Any:
         new_edges = []
         generated_features = generated_features.view(
@@ -30,8 +31,11 @@ class MendGraph(nn.Module):
         new_features = []
         assert node_len > 0
         feature_dict: dict[int, dict[int, torch.Tensor]] = {}
+        batch_mask_list = batch_mask.tolist()
 
         for i in range(node_len):
+            if not batch_mask_list[i]:
+                continue
             feature_dict[i] = {}
             for j in range(
                 min(predicated_missing_neighbor_num, max(0, int(degree_list[i])))
@@ -117,18 +121,26 @@ class LocalSagePlus(nn.Module):
         )
 
     def forward(self, x: torch.Tensor, edge_index: torch.Tensor, **kwargs: Any) -> dict:
-        new_feature = self.encoder_model(x, edge_index)
-        degree = self.reg_model(new_feature)
-        generated_features = self.gen(new_feature)
-        mend_x, mend_edge_index, feature_dict = self.mend_graph(
-            x=x,
-            edge_index=edge_index,
-            degree=degree,
-            generated_features=generated_features,
-        )
-        pred_output = self.classifier(mend_x, mend_edge_index)
+        if self.training:
+            new_feature = self.encoder_model(x, edge_index)
+            degree = self.reg_model(new_feature)
+            generated_features = self.gen(new_feature)
+            mend_x, mend_edge_index, feature_dict = self.mend_graph(
+                x=x,
+                edge_index=edge_index,
+                degree=degree,
+                generated_features=generated_features,
+                batch_mask=kwargs["batch_mask"],
+            )
+            pred_output = self.classifier(mend_x, mend_edge_index)
+            return {
+                "degree": degree,
+                "generated_features": feature_dict,
+                "output": pred_output,
+            }
+        pred_output = self.classifier(x, edge_index)
         return {
-            "degree": degree,
-            "generated_features": feature_dict,
             "output": pred_output,
+            "degree": None,
+            "generated_features": None,
         }

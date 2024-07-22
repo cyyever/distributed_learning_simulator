@@ -1,4 +1,5 @@
-from distributed_learning_simulation import GraphWorker, Message
+from distributed_learning_simulation import Message
+from distributed_learning_simulation.worker.graph_worker import GraphWorker
 from torch import Tensor
 
 

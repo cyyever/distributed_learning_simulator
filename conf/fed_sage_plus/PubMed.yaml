@@ -1,0 +1,3 @@
+---
+dataset_name: Planetoid_PubMed
+defaults: [common, _self_]

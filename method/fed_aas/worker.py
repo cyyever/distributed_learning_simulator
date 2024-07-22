@@ -1,8 +1,9 @@
 from typing import Any
 
-from cyy_naive_lib.log import get_logger
+from cyy_naive_lib.log import log_debug
 from cyy_torch_toolbox.ml_type import ExecutorHookPoint
-from distributed_learning_simulation import GraphWorker, Message
+from distributed_learning_simulation import Message
+from distributed_learning_simulation.worker.graph_worker import GraphWorker
 
 
 class FedAASWorker(GraphWorker):
@@ -28,7 +29,7 @@ class FedAASWorker(GraphWorker):
         assert self.__sharing_interval is not None
         if batch_index % self.__sharing_interval == 0:
             if self.worker_id == 0:
-                get_logger().debug(
+                log_debug(
                     "share embedding in batch %s %s",
                     batch_index,
                     self.__sharing_interval,

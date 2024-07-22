@@ -8,6 +8,8 @@ epoch: 1
 learning_rate: 0.001
 fake_weight_decay: 0.01
 distributed_algorithm: fed_gnn
+dataset_kwargs:
+  dataset_type: graph
 dataloader_kwargs:
   batch_number: 10
   num_neighbor: 10
