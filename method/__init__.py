@@ -1,9 +1,6 @@
 import importlib
 import os
 
-from distributed_learning_simulation.dependency import \
-    import_results  # noqa: F401
-
 for entry in os.scandir(os.path.dirname(os.path.abspath(__file__))):
     if not entry.is_dir():
         continue

@@ -73,7 +73,6 @@ class FedSagePlusModelEvaluator(GraphModelEvaluator):
             relabel_nodes=False,
             flow="target_to_source",
         )[1]
-        assert narrowed_edge_index.shape[1]
         edge_index_list = narrowed_edge_index.tolist()
         edge_dict: dict = {}
 
@@ -101,7 +100,7 @@ class FedSagePlusModelEvaluator(GraphModelEvaluator):
         node_idx = self.n_id[batch_mask]
 
         missed_neighbor = self.__get_hidden_neighbor(node_idx=node_idx)
-        log_error("generated_features len %s", len(generated_features))
+        log_debug("generated_features len %s", len(generated_features))
         for idx in sorted(generated_features.keys()):
             assert batch_mask_list[idx]
             hidden_neighbor_set = missed_neighbor.get(n_id_list[idx], set())

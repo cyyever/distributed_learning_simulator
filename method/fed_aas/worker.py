@@ -3,7 +3,7 @@ from typing import Any
 from cyy_naive_lib.log import log_debug
 from cyy_torch_toolbox.ml_type import ExecutorHookPoint
 from distributed_learning_simulation import Message
-from distributed_learning_simulation.worker.graph_worker import GraphWorker
+from distributed_learning_simulation.graph_worker import GraphWorker
 
 
 class FedAASWorker(GraphWorker):
