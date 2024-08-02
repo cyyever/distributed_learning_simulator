@@ -18,12 +18,13 @@ classifiers = [
 [tool.setuptools.package-dir]
 "distributed_learning_simulator.conf"= "./conf"
 "distributed_learning_simulator.method"= "./method"
+"distributed_learning_simulator.algorithm"= "./algorithm"
 
 [project.urls]
 Repository = "https://github.com/cyyever/distributed_learning_simulator"
 
 [tool.pyright]
-include = ["method"]
+include = ["method","algorithm"]
 defineConstant = { DEBUG = true }
 
 reportMissingImports = true
