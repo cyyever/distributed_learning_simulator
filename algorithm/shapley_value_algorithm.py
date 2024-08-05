@@ -32,6 +32,7 @@ class ShapleyValueAlgorithm(FedAVGAlgorithm):
                 initial_metric=self._server.performance_stat[
                     self._server.round_index - 1
                 ][f"test_{self.metric_type}"],
+                algorithm_kwargs=self.config.algorithm_kwargs,
             )
             assert isinstance(self.__sv_algorithm, RoundBasedShapleyValue)
             if (
@@ -42,6 +43,8 @@ class ShapleyValueAlgorithm(FedAVGAlgorithm):
                     self.config.algorithm_kwargs["round_trunc_threshold"]
                 )
             self.sv_algorithm.set_batch_metric_function(self._get_batch_metric)
+        # For client selection in each round
+        self.__sv_algorithm.set_players(sorted(self._all_worker_data.keys()))
         return self.__sv_algorithm
 
     @property
@@ -49,11 +52,11 @@ class ShapleyValueAlgorithm(FedAVGAlgorithm):
         return self.config.algorithm_kwargs.get("choose_best_subset", False)
 
     def aggregate_worker_data(self) -> ParameterMessage:
-        self.sv_algorithm.compute(round_number=self._server.round_index)
+        self.sv_algorithm.compute(round_index=self._server.round_index)
         if self.choose_best_subset:
             assert hasattr(self.sv_algorithm, "shapley_values_S")
             best_subset = self.sv_algorithm.get_best_players(
-                round_number=self._server.round_index
+                round_index=self._server.round_index
             )
             assert best_subset is not None
             get_logger().warning("use subset %s", best_subset)
