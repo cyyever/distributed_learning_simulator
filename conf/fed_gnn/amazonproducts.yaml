@@ -1,3 +1,0 @@
----
-dataset_name: AmazonProducts
-defaults: [common, _self_]

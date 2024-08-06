@@ -1,3 +1,0 @@
----
-dataset_name: TWeibo
-defaults: [common, _self_]

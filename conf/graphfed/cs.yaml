@@ -1,3 +1,0 @@
----
-dataset_name: Coauthor_CS
-defaults: [common, _self_]
