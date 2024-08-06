@@ -44,7 +44,9 @@ class ShapleyValueAlgorithm(FedAVGAlgorithm):
                 )
             self.sv_algorithm.set_batch_metric_function(self._get_batch_metric)
         # For client selection in each round
-        self.__sv_algorithm.set_players(sorted(self._all_worker_data.keys()))
+        self.__sv_algorithm.set_players(
+            sorted({k for k, v in self._all_worker_data.items() if v is not None})
+        )
         return self.__sv_algorithm
 
     @property
