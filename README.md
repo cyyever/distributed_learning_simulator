@@ -74,10 +74,24 @@ If you find our work useful, feel free to cite it:
 }
 ```
 
-### FedAAS
+### Historical Embedding-Guided Efficient Large-Scale Federated Graph Learning
 
-To run the experiments of **Historical Embedding-Guided Efficient Large-Scale Federated Graph Learning**, use this command
+The implementation has been move to other (GitHub repository)[https://github.com/cyyever/distributed_graph_learning_simulator]
+
+
+#### Reference
+
+If you find this work useful, feel free to cite it:
 
 ```
-bash fed_aas.sh
+@article{li2024historical,
+  title={Historical Embedding-Guided Efficient Large-Scale Federated Graph Learning},
+  author={Li, Anran and Chen, Yuanyuan and Zhang, Jian and Cheng, Mingfei and Huang, Yihao and Wu, Yueming and Luu, Anh Tuan and Yu, Han},
+  journal={Proceedings of the ACM on Management of Data},
+  volume={2},
+  number={3},
+  pages={1--24},
+  year={2024},
+  publisher={ACM New York, NY, USA}
+}
 ```
