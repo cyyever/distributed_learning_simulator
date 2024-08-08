@@ -62,9 +62,7 @@ class ShapleyValueAlgorithm(FedAVGAlgorithm):
             )
             assert best_subset is not None
             get_logger().warning("use subset %s", best_subset)
-            self._all_worker_data = {
-                k: v for k, v in self._all_worker_data.items() if k in best_subset
-            }
+            self._all_worker_data = {k: self._all_worker_data[k] for k in best_subset}
         return super().aggregate_worker_data()
 
     def _batch_metric_worker(self, task, **kwargs) -> dict:
@@ -85,7 +83,7 @@ class ShapleyValueAlgorithm(FedAVGAlgorithm):
     def _get_subset_metric(self, subset) -> dict:
         assert subset
         aggregated_parameter = FedAVGAlgorithm.aggregate_parameter(
-            {k: v for k, v in self._all_worker_data.items() if k in subset}
+            {k: self._all_worker_data[k] for k in self.sv_algorithm.get_players(subset)}
         )
 
         assert aggregated_parameter
