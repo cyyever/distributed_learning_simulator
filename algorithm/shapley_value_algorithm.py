@@ -3,7 +3,7 @@ import os
 from typing import Any, Type
 
 from cyy_naive_lib.concurrency import batch_process
-from cyy_naive_lib.log import get_logger
+from cyy_naive_lib.log import log_error, log_warning
 from cyy_torch_algorithm.shapely_value.shapley_value import \
     RoundBasedShapleyValue
 from cyy_torch_toolbox import TorchProcessTaskQueue
@@ -57,12 +57,12 @@ class ShapleyValueAlgorithm(FedAVGAlgorithm):
         self.sv_algorithm.compute(round_index=self._server.round_index)
         if self.choose_best_subset:
             assert hasattr(self.sv_algorithm, "shapley_values_S")
-            best_subset = self.sv_algorithm.get_best_players(
+            best_players = self.sv_algorithm.get_best_players(
                 round_index=self._server.round_index
             )
-            assert best_subset is not None
-            get_logger().warning("use subset %s", best_subset)
-            self._all_worker_data = {k: self._all_worker_data[k] for k in best_subset}
+            assert best_players is not None
+            log_warning("use players %s", best_players)
+            self._all_worker_data = {k: self._all_worker_data[k] for k in best_players}
         return super().aggregate_worker_data()
 
     def _batch_metric_worker(self, task, **kwargs) -> dict:
@@ -80,11 +80,12 @@ class ShapleyValueAlgorithm(FedAVGAlgorithm):
         queue.stop()
         return res
 
-    def _get_subset_metric(self, subset) -> dict:
+    def _get_subset_metric(self, subset) -> float:
         assert subset
         aggregated_parameter = FedAVGAlgorithm.aggregate_parameter(
             {k: self._all_worker_data[k] for k in self.sv_algorithm.get_players(subset)}
         )
+        log_error("use subset %s", subset)
 
         assert aggregated_parameter
         return self._server.get_metric(
