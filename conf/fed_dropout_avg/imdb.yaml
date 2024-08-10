@@ -22,3 +22,5 @@ model_kwargs:
   num_encoder_layer: 2
   d_model: 100
   nhead: 5
+  frozen_modules:
+    names: [embedding]
