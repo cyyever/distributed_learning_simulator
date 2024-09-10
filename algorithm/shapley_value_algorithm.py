@@ -85,8 +85,6 @@ class ShapleyValueAlgorithm(FedAVGAlgorithm):
         aggregated_parameter = FedAVGAlgorithm.aggregate_parameter(
             {k: self._all_worker_data[k] for k in self.sv_algorithm.get_players(subset)}
         )
-        log_error("use subset %s", subset)
-
         assert aggregated_parameter
         return self._server.get_metric(
             aggregated_parameter, log_performance_metric=False
