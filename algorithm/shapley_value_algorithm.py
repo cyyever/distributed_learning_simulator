@@ -3,7 +3,7 @@ import os
 from typing import Any, Type
 
 from cyy_naive_lib.concurrency import batch_process
-from cyy_naive_lib.log import log_error, log_warning
+from cyy_naive_lib.log import log_warning
 from cyy_torch_algorithm.shapely_value.shapley_value import \
     RoundBasedShapleyValue
 from cyy_torch_toolbox import TorchProcessTaskQueue
@@ -23,14 +23,18 @@ class ShapleyValueAlgorithm(FedAVGAlgorithm):
         self.sv_algorithm_cls = sv_algorithm_cls
 
     @property
+    def server(self) -> AggregationServer:
+        return self._server
+
+    @property
     def sv_algorithm(self) -> RoundBasedShapleyValue:
         if self.__sv_algorithm is None:
             assert self._all_worker_data
-            assert self._server.round_index == 1
+            assert self.server.round_index == 1
             self.__sv_algorithm = self.sv_algorithm_cls(
                 players=sorted(self._all_worker_data.keys()),
-                initial_metric=self._server.performance_stat[
-                    self._server.round_index - 1
+                initial_metric=self.server.performance_stat[
+                    self.server.round_index - 1
                 ][f"test_{self.metric_type}"],
                 algorithm_kwargs=self.config.algorithm_kwargs,
             )
@@ -54,11 +58,11 @@ class ShapleyValueAlgorithm(FedAVGAlgorithm):
         return self.config.algorithm_kwargs.get("choose_best_subset", False)
 
     def aggregate_worker_data(self) -> ParameterMessage:
-        self.sv_algorithm.compute(round_index=self._server.round_index)
+        self.sv_algorithm.compute(round_index=self.server.round_index)
         if self.choose_best_subset:
             assert hasattr(self.sv_algorithm, "shapley_values_S")
             best_players = self.sv_algorithm.get_best_players(
-                round_index=self._server.round_index
+                round_index=self.server.round_index
             )
             assert best_players is not None
             log_warning("use players %s", best_players)
@@ -86,8 +90,8 @@ class ShapleyValueAlgorithm(FedAVGAlgorithm):
             {k: self._all_worker_data[k] for k in self.sv_algorithm.get_players(subset)}
         )
         assert aggregated_parameter
-        return self._server.get_metric(
-            aggregated_parameter, log_performance_metric=False
+        return self.server.get_metric(
+            aggregated_parameter, log_performance_metric=False, copy_tester=True
         )[self.metric_type]
 
     def exit(self) -> None:
