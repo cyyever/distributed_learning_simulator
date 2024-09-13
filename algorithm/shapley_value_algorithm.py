@@ -91,7 +91,7 @@ class ShapleyValueAlgorithm(FedAVGAlgorithm):
         )
         assert aggregated_parameter
         return self.server.get_metric(
-            aggregated_parameter, log_performance_metric=False, copy_tester=True
+            aggregated_parameter, log_performance_metric=False, copy_tester=False
         )[self.metric_type]
 
     def exit(self) -> None:
