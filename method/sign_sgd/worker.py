@@ -1,6 +1,6 @@
 """ signSGD: Compressed Optimisation for Non-Convex Problems https://arxiv.org/abs/1802.04434 """
 
-from cyy_torch_toolbox.typing import ModelGradient, TensorDict
+from cyy_torch_toolbox import ModelGradient, TensorDict
 from distributed_learning_simulation import GradientWorker, ParameterMessage
 
 

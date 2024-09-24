@@ -3,8 +3,8 @@ import sys
 
 import torch
 from cyy_naive_lib.log import get_logger
+from cyy_torch_toolbox import ModelParameter
 from cyy_torch_toolbox.tensor import cat_tensors_to_vector
-from cyy_torch_toolbox.typing import ModelParameter
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from algorithm.block_algorithm import BlockAlgorithmMixin
