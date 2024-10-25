@@ -2,9 +2,12 @@ from typing import Any
 
 from cyy_naive_lib.log import get_logger
 from cyy_torch_toolbox import ExecutorHookPoint, ModelUtil
-from distributed_learning_simulation import (AggregationWorker, Message,
-                                             ParameterMessage,
-                                             QuantClientEndpoint)
+from distributed_learning_simulation import (
+    AggregationWorker,
+    Message,
+    ParameterMessage,
+    QuantClientEndpoint,
+)
 
 from .obd_algorithm import OpportunisticBlockDropoutAlgorithmMixin
 from .phase import Phase

@@ -1,7 +1,9 @@
-""" FedDropoutAvg: Generalizable federated learning for histopathology image classification (https://arxiv.org/pdf/2111.13230.pdf) """
+"""FedDropoutAvg: Generalizable federated learning for histopathology image classification (https://arxiv.org/pdf/2111.13230.pdf)"""
 
-from distributed_learning_simulation import (AggregationServer,
-                                             CentralizedAlgorithmFactory)
+from distributed_learning_simulation import (
+    AggregationServer,
+    CentralizedAlgorithmFactory,
+)
 
 from .algorithm import FedDropoutAvgAlgorithm
 from .worker import FedDropoutAvgWorker

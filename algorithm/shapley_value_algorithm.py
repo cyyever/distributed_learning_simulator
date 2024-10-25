@@ -1,19 +1,21 @@
 import json
 import os
-from typing import Any, Type
+from typing import Any
 
 from cyy_naive_lib.concurrency import batch_process
 from cyy_naive_lib.log import log_warning
-from cyy_torch_algorithm.shapely_value.shapley_value import \
-    RoundBasedShapleyValue
+from cyy_torch_algorithm.shapely_value.shapley_value import RoundBasedShapleyValue
 from cyy_torch_toolbox import TorchProcessTaskQueue
-from distributed_learning_simulation import (AggregationServer,
-                                             FedAVGAlgorithm, ParameterMessage)
+from distributed_learning_simulation import (
+    AggregationServer,
+    FedAVGAlgorithm,
+    ParameterMessage,
+)
 
 
 class ShapleyValueAlgorithm(FedAVGAlgorithm):
     def __init__(
-        self, sv_algorithm_cls: Type, server: AggregationServer, **kwargs: Any
+        self, sv_algorithm_cls: type, server: AggregationServer, **kwargs: Any
     ) -> None:
         super().__init__(**kwargs)
         self._server: AggregationServer = server
@@ -99,7 +101,7 @@ class ShapleyValueAlgorithm(FedAVGAlgorithm):
         self.sv_algorithm.exit()
         with open(
             os.path.join(self.config.save_dir, "shapley_values.json"),
-            "wt",
+            "w",
             encoding="utf8",
         ) as f:
             json.dump(self.sv_algorithm.get_result(), f)

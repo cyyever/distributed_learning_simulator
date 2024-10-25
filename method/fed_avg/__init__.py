@@ -1,7 +1,9 @@
-from distributed_learning_simulation import (AggregationServer,
-                                             AggregationWorker,
-                                             CentralizedAlgorithmFactory,
-                                             FedAVGAlgorithm)
+from distributed_learning_simulation import (
+    AggregationServer,
+    AggregationWorker,
+    CentralizedAlgorithmFactory,
+    FedAVGAlgorithm,
+)
 
 CentralizedAlgorithmFactory.register_algorithm(
     algorithm_name="fed_avg",

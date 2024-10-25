@@ -29,3 +29,23 @@ defineConstant = { DEBUG = true }
 
 reportMissingImports = true
 reportMissingTypeStubs = false
+
+[tool.ruff]
+target-version = "py312"
+src = ["method", "algorithm"]
+
+[tool.ruff.lint]
+select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+]

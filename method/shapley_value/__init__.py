@@ -1,5 +1,7 @@
-from distributed_learning_simulation import (AggregationWorker,
-                                             CentralizedAlgorithmFactory)
+from distributed_learning_simulation import (
+    AggregationWorker,
+    CentralizedAlgorithmFactory,
+)
 
 from .GTG_shapley_value_server import GTGShapleyValueServer
 from .multiround_shapley_value_server import MultiRoundShapleyValueServer

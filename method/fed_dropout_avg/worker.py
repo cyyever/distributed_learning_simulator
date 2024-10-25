@@ -1,4 +1,4 @@
-""" FedDropoutAvg: Generalizable federated learning for histopathology image classification (https://arxiv.org/pdf/2111.13230.pdf) """
+"""FedDropoutAvg: Generalizable federated learning for histopathology image classification (https://arxiv.org/pdf/2111.13230.pdf)"""
 
 import torch
 from cyy_naive_lib.log import get_logger
@@ -6,7 +6,6 @@ from distributed_learning_simulation import AggregationWorker, ParameterMessage
 
 
 class FedDropoutAvgWorker(AggregationWorker):
-
     def _get_sent_data(self) -> ParameterMessage:
         dropout_rate: float = self.config.algorithm_kwargs["dropout_rate"]
         if self.hold_log_lock:

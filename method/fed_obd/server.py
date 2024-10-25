@@ -1,10 +1,12 @@
 from typing import Any
 
 from cyy_naive_lib.log import get_logger
-from distributed_learning_simulation import (AggregationServer,
-                                             ParameterMessage,
-                                             ParameterMessageBase,
-                                             QuantServerEndpoint)
+from distributed_learning_simulation import (
+    AggregationServer,
+    ParameterMessage,
+    ParameterMessageBase,
+    QuantServerEndpoint,
+)
 
 from .phase import Phase
 

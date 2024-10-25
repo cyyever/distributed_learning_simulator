@@ -3,8 +3,7 @@ import torch.nn
 from cyy_naive_lib.log import get_logger
 from cyy_torch_toolbox import BlockType, ModelUtil
 from cyy_torch_toolbox.tensor import cat_tensors_to_vector
-from distributed_learning_simulation.worker.protocol import \
-    AggregationWorkerProtocol
+from distributed_learning_simulation.worker.protocol import AggregationWorkerProtocol
 
 
 class BlockAlgorithmMixin(AggregationWorkerProtocol):

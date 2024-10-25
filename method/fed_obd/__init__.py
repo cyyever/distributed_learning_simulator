@@ -1,9 +1,11 @@
-from distributed_learning_simulation import (CentralizedAlgorithmFactory,
-                                             FedAVGAlgorithm,
-                                             NNADQClientEndpoint,
-                                             NNADQServerEndpoint,
-                                             StochasticQuantClientEndpoint,
-                                             StochasticQuantServerEndpoint)
+from distributed_learning_simulation import (
+    CentralizedAlgorithmFactory,
+    FedAVGAlgorithm,
+    NNADQClientEndpoint,
+    NNADQServerEndpoint,
+    StochasticQuantClientEndpoint,
+    StochasticQuantServerEndpoint,
+)
 
 from .server import FedOBDServer
 from .worker import FedOBDWorker
