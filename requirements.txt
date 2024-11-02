@@ -9,7 +9,7 @@ psutil
 FileLock-git
 requests
 tqdm
-torch>=2.3
+torch>=2.5.1
 nvidia-ml-py
 torchvision
 torchmetrics
