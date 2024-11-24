@@ -2,7 +2,7 @@ import os
 import sys
 
 import torch
-from cyy_naive_lib.log import get_logger
+from cyy_naive_lib.log import log_debug, log_info
 from cyy_torch_toolbox import ModelParameter
 from cyy_torch_toolbox.tensor import cat_tensors_to_vector
 
@@ -14,7 +14,7 @@ class OpportunisticBlockDropoutAlgorithmMixin(BlockAlgorithmMixin):
     def __init__(self) -> None:
         super().__init__()
         self.__dropout_rate = self.config.algorithm_kwargs["dropout_rate"]
-        get_logger().debug("use dropout rate %s", self.__dropout_rate)
+        log_debug("use dropout rate %s", self.__dropout_rate)
         self.__parameter_num: int = 0
 
     def get_block_parameter(self, parameter: ModelParameter) -> ModelParameter:
@@ -32,9 +32,7 @@ class OpportunisticBlockDropoutAlgorithmMixin(BlockAlgorithmMixin):
             if mean_delta not in block_delta:
                 block_delta[mean_delta] = []
             block_delta[mean_delta].append((block_dict, block_size))
-        get_logger().debug(
-            "block_delta is %s", sorted(block_delta.keys(), reverse=True)
-        )
+        log_debug("block_delta is %s", sorted(block_delta.keys(), reverse=True))
 
         for mean_delta in sorted(block_delta.keys(), reverse=True):
             if partial_parameter_num > threshold:
@@ -44,8 +42,8 @@ class OpportunisticBlockDropoutAlgorithmMixin(BlockAlgorithmMixin):
                     continue
                 partial_parameter_num += block_size
                 new_parameter |= block_dict
-        get_logger().debug("choose blocks %s", new_parameter.keys())
-        get_logger().info(
+        log_debug("choose blocks %s", new_parameter.keys())
+        log_info(
             "partial_parameter_num %s threshold %s parameter_num %s",
             partial_parameter_num,
             threshold,

@@ -1,5 +1,5 @@
 import torch
-from cyy_naive_lib.log import get_logger
+from cyy_naive_lib.log import log_info
 from cyy_torch_toolbox.hook import Hook
 from cyy_torch_toolbox.model.util import ModelUtil
 from cyy_torch_toolbox.tensor import cat_tensors_to_vector
@@ -16,7 +16,7 @@ class ModuleDiff(Hook):
         sub_modules = []
         for module_name, module in model_util.get_sub_modules():
             if len(list(module.parameters())) == 0:
-                # get_logger().warning("ignore module %s", module_name)
+                # log_warning("ignore module %s", module_name)
                 continue
             sub_modules.append(
                 (module_name, cat_tensors_to_vector(module.parameters()).cpu().detach())
@@ -35,10 +35,10 @@ class ModuleDiff(Hook):
         for (prev_sub_module_name, prev_parameter), (
             sub_module_name,
             parameter,
-        ) in zip(self.__prev_modules, cur_modules):
+        ) in zip(self.__prev_modules, cur_modules, strict=False):
             assert prev_sub_module_name == sub_module_name
             diff = torch.linalg.norm(prev_parameter - parameter)
             if self.__delta is not None and diff <= self.__delta:
                 continue
-            get_logger().info("module %s has diff %s", sub_module_name, diff)
+            log_info("module %s has diff %s", sub_module_name, diff)
         self.__prev_modules = cur_modules
