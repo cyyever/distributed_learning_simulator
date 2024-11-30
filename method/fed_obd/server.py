@@ -1,6 +1,6 @@
 from typing import Any
 
-from cyy_naive_lib.log import get_logger
+from cyy_naive_lib.log import log_warning
 from distributed_learning_simulation import (
     AggregationServer,
     ParameterMessage,
@@ -19,10 +19,10 @@ class FedOBDServer(AggregationServer):
         self._endpoint.use_quant = True
         self._compute_stat = True
 
-    def _select_workers(self) -> set:
+    def select_workers(self) -> set:
         if self.__phase != Phase.STAGE_ONE:
             return set(range(self.worker_number))
-        return super()._select_workers()
+        return super().select_workers()
 
     def _get_stat_key(self, message: ParameterMessage):
         if self.__phase == Phase.STAGE_TWO:
@@ -37,12 +37,12 @@ class FedOBDServer(AggregationServer):
                 if self.round_index >= self.config.round or (
                     self.early_stop and not self.__has_improvement()
                 ):
-                    get_logger().warning("switch to phase 2")
+                    log_warning("switch to phase 2")
                     self.__phase = Phase.STAGE_TWO
                     result.other_data["phase_two"] = True
             case Phase.STAGE_TWO:
                 if self.early_stop and not self.__has_improvement():
-                    get_logger().warning("stop aggregation")
+                    log_warning("stop aggregation")
                     result.end_training = True
             case _:
                 raise NotImplementedError(f"unknown phase {self.__phase}")

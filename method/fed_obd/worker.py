@@ -1,6 +1,6 @@
 from typing import Any
 
-from cyy_naive_lib.log import get_logger
+from cyy_naive_lib.log import log_debug, log_warning
 from cyy_torch_toolbox import ExecutorHookPoint, ModelUtil
 from distributed_learning_simulation import (
     AggregationWorker,
@@ -29,7 +29,7 @@ class FedOBDWorker(AggregationWorker, OpportunisticBlockDropoutAlgorithmMixin):
             assert isinstance(result, ParameterMessage)
             # result.other_data.pop("phase_two")
             self.__phase = Phase.STAGE_TWO
-            get_logger().warning("switch to phase 2")
+            log_warning("switch to phase 2")
             self._reuse_learning_rate = True
             self._send_parameter_diff = True
             self.disable_choosing_model_by_validation()
@@ -51,7 +51,7 @@ class FedOBDWorker(AggregationWorker, OpportunisticBlockDropoutAlgorithmMixin):
             if kwargs["epoch"] == executor.hyper_parameter.epoch:
                 sent_data.end_training = True
                 self._force_stop = True
-                get_logger().debug("end training")
+                log_debug("end training")
         super()._aggregation(sent_data=sent_data, **kwargs)
 
     def _stopped(self) -> bool:
@@ -69,5 +69,5 @@ class FedOBDWorker(AggregationWorker, OpportunisticBlockDropoutAlgorithmMixin):
             return data
 
         data.in_round = True
-        get_logger().warning("phase 2 keys %s", data.other_data.keys())
+        log_warning("phase 2 keys %s", data.other_data.keys())
         return data

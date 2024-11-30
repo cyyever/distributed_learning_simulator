@@ -1,6 +1,6 @@
 import torch
 import torch.nn
-from cyy_naive_lib.log import get_logger
+from cyy_naive_lib.log import log_info
 from cyy_torch_toolbox import BlockType, ModelUtil
 from cyy_torch_toolbox.tensor import cat_tensors_to_vector
 from distributed_learning_simulation.worker.protocol import AggregationWorkerProtocol
@@ -70,12 +70,12 @@ class BlockAlgorithmMixin(AggregationWorkerProtocol):
                 continue
             self.__blocks.append([(submodule_name, submodule)])
             if self.hold_log_lock:
-                get_logger().info("identify a submodule:%s", submodule_name)
+                log_info("identify a submodule:%s", submodule_name)
 
         if self.hold_log_lock:
-            get_logger().info("identify these blocks in model:")
+            log_info("identify these blocks in model:")
             for block in self.__blocks:
-                get_logger().info(
+                log_info(
                     "%s",
                     [f"{name}" for name, _ in block],
                 )
