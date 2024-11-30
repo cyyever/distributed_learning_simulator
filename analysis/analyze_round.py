@@ -24,7 +24,6 @@ def extract_data(
                 continue
             with open(
                 metric_file,
-                "rt",
                 encoding="utf8",
             ) as f:
                 performance_metric = json.load(f)

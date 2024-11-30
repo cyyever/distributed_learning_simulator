@@ -35,7 +35,7 @@ class ModuleDiff(Hook):
         for (prev_sub_module_name, prev_parameter), (
             sub_module_name,
             parameter,
-        ) in zip(self.__prev_modules, cur_modules):
+        ) in zip(self.__prev_modules, cur_modules, strict=False):
             assert prev_sub_module_name == sub_module_name
             diff = torch.linalg.norm(prev_parameter - parameter)
             if self.__delta is not None and diff <= self.__delta:

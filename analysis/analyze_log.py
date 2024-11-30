@@ -17,7 +17,7 @@ def compute_acc(paths: list) -> None:
     for path in paths:
         assert os.path.isfile(path)
         lines = None
-        with open(path, "rt", encoding="utf8") as f:
+        with open(path, encoding="utf8") as f:
             lines = f.readlines()
         for line in reversed(lines):
             if config.distributed_algorithm == "sign_SGD":
@@ -101,7 +101,7 @@ def compute_data_amount(paths: list) -> dict:
                 lines = None
                 compressed_part = 0
                 rnd_cnt = 0
-                with open(path, "rt", encoding="utf8") as f:
+                with open(path, encoding="utf8") as f:
                     lines = f.readlines()
                 stage_one = True
                 for line in lines:
@@ -168,7 +168,7 @@ def compute_data_amount(paths: list) -> dict:
             data_amounts = []
             for path in paths:
                 lines = None
-                with open(path, "rt", encoding="utf8") as f:
+                with open(path, encoding="utf8") as f:
                     lines = f.readlines()
                 uploaded_parameter_num = 0
                 for line in lines:
@@ -193,7 +193,7 @@ def compute_data_amount(paths: list) -> dict:
             for path in paths:
                 transfer_number = 0
                 lines = None
-                with open(path, "rt", encoding="utf8") as f:
+                with open(path, encoding="utf8") as f:
                     lines = f.readlines()
                 for line in lines:
                     if "send_num" in line:
@@ -215,7 +215,7 @@ def compute_data_amount(paths: list) -> dict:
                 lines = None
                 compressed_part = 0
                 rnd_cnt = 0
-                with open(path, "rt", encoding="utf8") as f:
+                with open(path, encoding="utf8") as f:
                     lines = f.readlines()
                 stage_one = True
                 for line in lines:

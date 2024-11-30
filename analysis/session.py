@@ -20,7 +20,6 @@ def get_worker_stat(session_dir: str) -> dict:
                 if os.path.isfile(os.path.join(root, name, "graph_worker_stat.json")):
                     with open(
                         os.path.join(root, name, "graph_worker_stat.json"),
-                        "rt",
                         encoding="utf8",
                     ) as f:
                         worker_data[name] = json.load(f)
@@ -30,9 +29,7 @@ def get_worker_stat(session_dir: str) -> dict:
 class Session:
     def __init__(self, session_dir: str) -> None:
         assert session_dir
-        with open(
-            os.path.join(session_dir, "round_record.json"), "rt", encoding="utf8"
-        ) as f:
+        with open(os.path.join(session_dir, "round_record.json"), encoding="utf8") as f:
             self.round_record = json.load(f)
         self.round_record = {int(k): v for k, v in self.round_record.items()}
         with open(os.path.join(session_dir, "config.pkl"), "rb") as f:
