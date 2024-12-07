@@ -8,6 +8,7 @@ from distributed_learning_simulation import (
     ParameterMessage,
     QuantClientEndpoint,
 )
+from distributed_learning_simulation.context import ClientEndpointInCoroutine
 
 from .obd_algorithm import OpportunisticBlockDropoutAlgorithmMixin
 from .phase import Phase
@@ -19,7 +20,9 @@ class FedOBDWorker(AggregationWorker, OpportunisticBlockDropoutAlgorithmMixin):
     def __init__(self, *args, **kwargs):
         AggregationWorker.__init__(self, *args, **kwargs)
         OpportunisticBlockDropoutAlgorithmMixin.__init__(self)
-        assert isinstance(self._endpoint, QuantClientEndpoint)
+        assert isinstance(
+            self._endpoint, QuantClientEndpoint | ClientEndpointInCoroutine
+        )
         self._endpoint.dequant_server_data = True
         self._send_parameter_diff = False
         self._keep_model_cache = True
