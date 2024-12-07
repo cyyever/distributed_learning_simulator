@@ -1,4 +1,3 @@
 distributed_learning_simulation@git+https://github.com/cyyever/distributed_learning_simulation_lib.git@main
-cyy_torch_algorithm@git+https://github.com/cyyever/torch_algorithm.git@main
 cyy_torch_text@git+https://github.com/cyyever/torch_text.git@main
 cyy_torch_vision@git+https://github.com/cyyever/torch_vision.git@main
