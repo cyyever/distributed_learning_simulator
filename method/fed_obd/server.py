@@ -16,7 +16,7 @@ class FedOBDServer(AggregationServer):
         super().__init__(**kwargs)
         self.__phase: Phase = Phase.STAGE_ONE
         assert isinstance(self._endpoint, QuantServerEndpoint)
-        self._endpoint.use_quant = True
+        self._endpoint.use_quant()
         self._compute_stat = True
 
     def select_workers(self) -> set:

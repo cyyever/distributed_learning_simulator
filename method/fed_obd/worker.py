@@ -23,7 +23,7 @@ class FedOBDWorker(AggregationWorker, OpportunisticBlockDropoutAlgorithmMixin):
         assert isinstance(
             self._endpoint, QuantClientEndpoint | ClientEndpointInCoroutine
         )
-        self._endpoint.dequant_server_data = True
+        self._endpoint.dequant_server_data()
         self._send_parameter_diff = False
         self._keep_model_cache = True
 
