@@ -1,11 +1,11 @@
 from distributed_learning_simulation import (
     AggregationServer,
     AggregationWorker,
-    CentralizedAlgorithmFactory,
+    AlgorithmRepository,
     FedAVGAlgorithm,
 )
 
-CentralizedAlgorithmFactory.register_algorithm(
+AlgorithmRepository.register_algorithm(
     algorithm_name="fed_avg",
     client_cls=AggregationWorker,
     server_cls=AggregationServer,

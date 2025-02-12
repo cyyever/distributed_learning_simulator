@@ -2,14 +2,14 @@
 
 from distributed_learning_simulation import (
     AggregationServer,
-    CentralizedAlgorithmFactory,
+    AlgorithmRepository,
     FedAVGAlgorithm,
     GradientWorker,
     StochasticQuantClientEndpoint,
     StochasticQuantServerEndpoint,
 )
 
-CentralizedAlgorithmFactory.register_algorithm(
+AlgorithmRepository.register_algorithm(
     algorithm_name="QSGD",
     client_cls=GradientWorker,
     server_cls=AggregationServer,

@@ -1,5 +1,5 @@
 from distributed_learning_simulation import (
-    CentralizedAlgorithmFactory,
+    AlgorithmRepository,
     FedAVGAlgorithm,
     NNADQClientEndpoint,
     NNADQServerEndpoint,
@@ -10,7 +10,7 @@ from distributed_learning_simulation import (
 from .server import FedOBDServer
 from .worker import FedOBDWorker
 
-CentralizedAlgorithmFactory.register_algorithm(
+AlgorithmRepository.register_algorithm(
     algorithm_name="fed_obd",
     client_cls=FedOBDWorker,
     server_cls=FedOBDServer,
@@ -19,7 +19,7 @@ CentralizedAlgorithmFactory.register_algorithm(
     algorithm_cls=FedAVGAlgorithm,
 )
 
-CentralizedAlgorithmFactory.register_algorithm(
+AlgorithmRepository.register_algorithm(
     algorithm_name="fed_obd_sq",
     client_cls=FedOBDWorker,
     server_cls=FedOBDServer,

@@ -2,13 +2,13 @@
 from distributed_learning_simulation import (
     AggregationServer,
     AggregationWorker,
-    CentralizedAlgorithmFactory,
+    AlgorithmRepository,
     FedAVGAlgorithm,
     StochasticQuantClientEndpoint,
     StochasticQuantServerEndpoint,
 )
 
-CentralizedAlgorithmFactory.register_algorithm(
+AlgorithmRepository.register_algorithm(
     algorithm_name="fed_paq",
     client_cls=AggregationWorker,
     server_cls=AggregationServer,

@@ -2,13 +2,13 @@
 
 from distributed_learning_simulation import (
     AggregationServer,
-    CentralizedAlgorithmFactory,
+    AlgorithmRepository,
 )
 
 from .algorithm import SignSGDAlgorithm
 from .worker import SignSGDWorker
 
-CentralizedAlgorithmFactory.register_algorithm(
+AlgorithmRepository.register_algorithm(
     algorithm_name="sign_SGD",
     client_cls=SignSGDWorker,
     server_cls=AggregationServer,
