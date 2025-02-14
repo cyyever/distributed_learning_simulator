@@ -33,7 +33,7 @@ class FedOBDWorker(AggregationWorker, OpportunisticBlockDropoutAlgorithmMixin):
             # result.other_data.pop("phase_two")
             self.__phase = Phase.STAGE_TWO
             log_warning("switch to phase 2")
-            self._reuse_learning_rate = True
+            self.set_reuse_learning_rate(True)
             self._send_parameter_diff = True
             self.disable_choosing_model_by_validation()
             self.trainer.hyper_parameter.epoch = self.config.algorithm_kwargs[
