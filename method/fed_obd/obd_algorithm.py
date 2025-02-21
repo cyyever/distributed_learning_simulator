@@ -1,13 +1,8 @@
-import os
-import sys
-
 import torch
+from algorithm.block_algorithm import BlockAlgorithmMixin
 from cyy_naive_lib.log import log_debug, log_info
 from cyy_torch_toolbox import ModelParameter
 from cyy_torch_toolbox.tensor import cat_tensors_to_vector
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
-from algorithm.block_algorithm import BlockAlgorithmMixin
 
 
 class OpportunisticBlockDropoutAlgorithmMixin(BlockAlgorithmMixin):
