@@ -28,12 +28,6 @@ dependencies = {file = ["requirements.txt"]}
 [project.urls]
 Repository = "https://github.com/cyyever/distributed_learning_simulator"
 
-[tool.pyright]
-include = ["method","algorithm"]
-defineConstant = { DEBUG = true }
-
-reportMissingImports = true
-reportMissingTypeStubs = false
 
 [tool.ruff]
 target-version = "py312"
@@ -54,3 +48,4 @@ select = [
     # isort
     "I",
 ]
+ignore = ["F401","E501","F403"]
