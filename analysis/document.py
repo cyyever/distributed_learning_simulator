@@ -3,15 +3,11 @@ import os
 
 import pandas as pd
 import torch
-
-from .session import Session
+from distributed_learning_simulation import Session
 
 
 def dump_analysis() -> None:
-    session_path = os.getenv("session_path")
-    assert session_path is not None
-    session_path = session_path.strip()
-    session = Session(session_path)
+    session = Session()
     config = session.config
     res = {}
     res["exp_name"] = config.exp_name
