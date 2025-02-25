@@ -29,4 +29,4 @@ if __name__ == "__main__":
             config_path=config_path,
             global_conf_path=os.path.join(config_path, "global.yaml"),
         )
-        train(config=config)
+        train(config=config, single_task=True)
