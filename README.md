@@ -4,10 +4,12 @@ This is a simulator for distributed Machine Learning and Federated Learning on a
 
 ## Installation
 
-This is a Python project. The third party dependencies are listed in **requirements.txt**. If you use PIP, it should be easy to install:
+This is a Python project. The third party dependencies are listed in **pyproject.toml **.
+
+Use PIP to setup:
 
 ```
-python3 -m pip install . --user
+python3 -m pip install . --upgrade --force-reinstall --user
 ```
 
 ## Our Works
