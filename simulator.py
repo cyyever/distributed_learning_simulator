@@ -10,6 +10,14 @@ import_dependencies()
 
 
 if __name__ == "__main__":
+    # disable hydra output dir
+    for option in [
+        "hydra.run.dir=.",
+        "hydra.output_subdir=null",
+        "hydra/job_logging=disabled",
+        "hydra/hydra_logging=disabled",
+    ]:
+        sys.argv.append(option)
     config_path = os.path.join(os.path.dirname(__file__), "conf")
     config = load_config(
         config_path=config_path,
