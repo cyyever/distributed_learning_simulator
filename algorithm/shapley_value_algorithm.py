@@ -88,8 +88,8 @@ class ShapleyValueAlgorithm(FedAVGAlgorithm):
 
     def _get_subset_metric(self, subset) -> float:
         assert subset
-        aggregated_parameter = FedAVGAlgorithm.aggregate_parameter(
-            {k: self._all_worker_data[k] for k in self.sv_algorithm.get_players(subset)}
+        aggregated_parameter = super()._aggregate_parameter(
+            chosen_worker_ids=set(self.sv_algorithm.get_players(subset))
         )
         assert aggregated_parameter
         return self.server.get_metric(
