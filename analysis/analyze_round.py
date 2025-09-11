@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 from cyy_naive_lib.fs.path import find_directories
-from simulation_lib.config import load_config_from_file
+from distributed_learning_simulation.config import load_config
 
 
 def extract_data(
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     config_files = os.getenv("config_files")
     assert config_files is not None
     for config_file in config_files.split():
-        config = load_config_from_file(config_file=config_file)
+        config = load_config(config_file)
         session_path = (
             f"session/{config.distributed_algorithm}/{config.dc_config.dataset_name}/"
         )
