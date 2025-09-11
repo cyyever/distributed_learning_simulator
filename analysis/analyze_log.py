@@ -1,14 +1,7 @@
 import os
 import re
-import sys
-
-currentdir = os.path.dirname(os.path.realpath(__file__))
-
-sys.path.insert(0, os.path.join(currentdir, ".."))
-
 import torch
-from config import global_config as config
-from config import load_config
+from distributed_learning_simulation import load_config
 
 
 def compute_acc(paths: list) -> None:
@@ -280,7 +273,7 @@ def compute_data_amount(paths: list) -> dict:
 
 
 if __name__ == "__main__":
-    load_config()
+    # load_config()
     # config.distributed_algorithm = "fed_obd_first_stage"
     paths = os.getenv("logfiles").strip().split(" ")
     assert paths
