@@ -1,8 +1,8 @@
 import torch
 import torch.nn
 from cyy_naive_lib.log import log_info
+from cyy_preprocessing_pipeline import cat_tensors_to_vector
 from cyy_torch_toolbox import BlockType, ModelUtil
-from cyy_torch_toolbox.tensor import cat_tensors_to_vector
 from distributed_learning_simulation.worker.protocol import AggregationWorkerProtocol
 
 
