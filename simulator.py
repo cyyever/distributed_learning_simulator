@@ -1,6 +1,7 @@
 import os
 import sys
 
+import cyy_huggingface_toolbox # noqa: F401
 import cyy_torch_text  # noqa: F401
 import cyy_torch_vision  # noqa: F401
 from cyy_naive_lib.log import redirect_stdout_to_logger
