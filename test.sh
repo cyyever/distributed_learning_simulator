@@ -1,3 +1,6 @@
+#!/bin/bash
+set -e
+
 # CV
 python3 ./simulator.py --config-name fed_avg/mnist.yaml ++fed_avg.round=2 ++fed_avg.epoch=1 ++fed_avg.worker_number=10 ++fed_avg.debug=True
 # NLP

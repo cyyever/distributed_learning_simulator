@@ -4,7 +4,7 @@ from typing import Any
 
 from cyy_naive_lib.concurrency import batch_process
 from cyy_naive_lib.log import log_warning
-from cyy_torch_algorithm.shapely_value.shapley_value import RoundBasedShapleyValue
+from cyy_torch_algorithm.shapley_value.shapley_value import RoundBasedShapleyValue
 from cyy_torch_toolbox import TorchProcessTaskQueue
 from distributed_learning_simulation import (
     AggregationServer,
