@@ -1,9 +1,8 @@
 import torch
+from algorithm.block_algorithm import BlockAlgorithmMixin
 from cyy_naive_lib.log import log_debug, log_info
 from cyy_preprocessing_pipeline import cat_tensors_to_vector
 from cyy_torch_toolbox import ModelParameter
-
-from algorithm.block_algorithm import BlockAlgorithmMixin
 
 
 class OpportunisticBlockDropoutAlgorithmMixin(BlockAlgorithmMixin):

@@ -1,8 +1,7 @@
+from algorithm.shapley_value_algorithm import ShapleyValueAlgorithm
 from cyy_torch_algorithm.shapley_value.multiround_shapley_value import (
     MultiRoundShapleyValue,
 )
-
-from algorithm.shapley_value_algorithm import ShapleyValueAlgorithm
 
 
 class MultiRoundShapleyValueAlgorithm(ShapleyValueAlgorithm):
