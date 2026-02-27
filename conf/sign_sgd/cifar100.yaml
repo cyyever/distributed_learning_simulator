@@ -1,5 +1,7 @@
 ---
 dataset_name: CIFAR100
+dataset_kwargs:
+  dataset_type: vision
 model_name: densenet40
 distributed_algorithm: sign_SGD
 optimizer_name: SGD

@@ -1,5 +1,7 @@
 ---
 dataset_name: MNIST
+dataset_kwargs:
+  dataset_type: vision
 model_name: LeNet5
 distributed_algorithm: fed_avg_qat
 optimizer_name: SGD

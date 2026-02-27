@@ -1,5 +1,7 @@
 ---
 dataset_name: MNIST
+dataset_kwargs:
+  dataset_type: vision
 model_name: lenet5
 distributed_algorithm: QSGD
 worker_number: 2

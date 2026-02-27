@@ -1,5 +1,7 @@
 ---
 dataset_name: MNIST
+dataset_kwargs:
+  dataset_type: vision
 model_name: LeNet5
 distributed_algorithm: GTG_shapley_value
 optimizer_name: SGD

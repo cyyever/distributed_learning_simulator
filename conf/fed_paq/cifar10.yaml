@@ -1,5 +1,7 @@
 ---
 dataset_name: CIFAR10
+dataset_kwargs:
+  dataset_type: vision
 model_name: densenet40
 distributed_algorithm: fed_paq
 optimizer_name: SGD
