@@ -1,20 +1,21 @@
 import os
 import sys
+from pathlib import Path
 
-import cyy_huggingface_toolbox  # noqa: F401
-import cyy_torch_text  # noqa: F401
-import cyy_torch_vision  # noqa: F401
-from cyy_naive_lib.log import redirect_stdout_to_logger
-from distributed_learning_simulation import load_config, train
+from distributed_learning_simulation.config import import_dependencies
+
+import_dependencies(dataset_type=os.environ.get("CYY_DATASET_TYPE"))
 
 sys.path.insert(0, os.path.abspath("."))
 import method  # noqa: F401
 
 if __name__ == "__main__":
-    with redirect_stdout_to_logger():
-        config_path = os.path.join(os.path.dirname(__file__), "conf")
-        config = load_config(
-            config_path=config_path,
-            global_conf_path=os.path.join(config_path, "global.yaml"),
-        )
-        train(config=config, single_task=True)
+    from distributed_learning_simulation import load_config, train
+
+    config_path = Path(__file__).parent / "conf"
+    config = load_config(
+        config_path=config_path,
+        global_conf_path=config_path / "global.yaml",
+        import_libs=False,
+    )
+    train(config=config, single_task=True)
